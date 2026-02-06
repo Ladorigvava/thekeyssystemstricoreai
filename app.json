@@ -1,0 +1,35 @@
+{
+  "name": "The Keys System - Tri-Core AI",
+  "description": "A powerful AI interface with tri-core architecture supporting GPT-4, Claude, and Gemini",
+  "repository": "https://github.com/Ladorigvava/the-keys-system-duck",
+  "keywords": ["ai", "react", "vite", "chatbot", "openai", "anthropic", "google-ai"],
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "env": {
+    "VITE_OPENAI_API_KEY": {
+      "description": "OpenAI API key for GPT models (get from https://platform.openai.com/api-keys)",
+      "required": false
+    },
+    "VITE_ANTHROPIC_API_KEY": {
+      "description": "Anthropic API key for Claude models (get from https://console.anthropic.com/)",
+      "required": false
+    },
+    "VITE_GOOGLE_AI_API_KEY": {
+      "description": "Google AI API key for Gemini models (get from https://makersuite.google.com/app/apikey)",
+      "required": false
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "addons": [],
+  "scripts": {
+    "postdeploy": "echo 'Deployment successful! Make sure to set at least one API key (VITE_OPENAI_API_KEY, VITE_ANTHROPIC_API_KEY, or VITE_GOOGLE_AI_API_KEY) in the Heroku dashboard.'"
+  }
+}
