@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "env": {
+    "VITE_OPENAI_API_KEY": "@openai_api_key",
+    "VITE_ANTHROPIC_API_KEY": "@anthropic_api_key",
+    "VITE_GOOGLE_AI_API_KEY": "@google_ai_api_key"
+  }
+}
