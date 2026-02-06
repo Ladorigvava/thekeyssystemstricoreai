@@ -1,0 +1,15 @@
+# Files to ignore during Heroku build (saves slug size)
+*.md
+!HEROKU_DEPLOY.md
+!README.md
+.git
+.github
+.idea
+.vscode
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage/
+docs/
+.env.example
