@@ -9,34 +9,36 @@ import { ScrollArea } from './ui/scroll-area'
 import { Checkbox } from './ui/checkbox'
 import { Label } from './ui/label'
 import { AIEngine, ENGINE_CONFIGS } from '@/lib/engines'
-import { 
-  runStreamingRace, 
-  formatTime, 
-  formatSpeed, 
+import {
+  runStreamingRace,
+  formatTime,
+  formatSpeed,
   getSpeedWinner,
   getThroughputWinner,
   type RaceProgress,
-  type RaceStats
+  type RaceStats,
 } from '@/lib/streaming-race'
-import { 
-  Rabbit, 
-  Trophy, 
-  Timer, 
+import {
+  Rabbit,
+  Trophy,
+  Timer,
   Lightning,
   Article,
   Gauge,
   Flag,
-  CircleNotch
+  CircleNotch,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
 export function StreamingRaceView({ onBack }: { onBack: () => void }) {
   const [prompt, setPrompt] = useState('')
   const [selectedEngines, setSelectedEngines] = useState<Set<AIEngine>>(
-    new Set(['gpt-4o', 'claude-3.5-sonnet', 'gemini-2.0-flash-thinking'] as AIEngine[])
+    new Set(['gpt-4o', 'claude-sonnet-5', 'gemini-2.5-pro'] as AIEngine[]),
   )
   const [isRacing, setIsRacing] = useState(false)
-  const [progress, setProgress] = useState<Map<AIEngine, RaceProgress>>(new Map())
+  const [progress, setProgress] = useState<Map<AIEngine, RaceProgress>>(
+    new Map(),
+  )
   const [stats, setStats] = useState<Map<AIEngine, RaceStats>>(new Map())
   const [stage, setStage] = useState<'setup' | 'racing' | 'complete'>('setup')
 
@@ -81,14 +83,14 @@ export function StreamingRaceView({ onBack }: { onBack: () => void }) {
           setStats(new Map(finalStats))
           setStage('complete')
           toast.success('Race complete!', {
-            description: 'All engines have finished'
+            description: 'All engines have finished',
           })
-        }
+        },
       )
     } catch (error) {
       console.error('Race error:', error)
       toast.error('Race failed', {
-        description: 'Please try again or select different engines'
+        description: 'Please try again or select different engines',
       })
     } finally {
       setIsRacing(false)
@@ -105,7 +107,7 @@ export function StreamingRaceView({ onBack }: { onBack: () => void }) {
   // Calculate rankings
   const speedWinner = getSpeedWinner(stats)
   const throughputWinner = getThroughputWinner(stats)
-  
+
   // Get sorted engines by completion time
   const sortedBySpeed = Array.from(stats.entries())
     .sort(([, a], [, b]) => a.totalTime - b.totalTime)
@@ -131,7 +133,9 @@ export function StreamingRaceView({ onBack }: { onBack: () => void }) {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Rabbit size={24} weight="duotone" className="text-primary" />
-                <h1 className="text-2xl font-bold font-display">Streaming Race</h1>
+                <h1 className="text-2xl font-bold font-display">
+                  Streaming Race
+                </h1>
               </div>
               <p className="text-sm text-muted-foreground">
                 Watch AI models compete in real-time with live speed metrics
@@ -146,7 +150,9 @@ export function StreamingRaceView({ onBack }: { onBack: () => void }) {
             <div className="space-y-6">
               {/* Engine Selection */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Select Racers (2-6 engines)</Label>
+                <Label className="text-sm font-medium">
+                  Select Racers (2-6 engines)
+                </Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {(Object.keys(ENGINE_CONFIGS) as AIEngine[]).map((engine) => (
                     <div
@@ -204,7 +210,8 @@ export function StreamingRaceView({ onBack }: { onBack: () => void }) {
                 {Array.from(selectedEngines).map((engine) => {
                   const prog = progress.get(engine)
                   const stat = stats.get(engine)
-                  const isWinner = stage === 'complete' && speedWinner === engine
+                  const isWinner =
+                    stage === 'complete' && speedWinner === engine
                   const position = sortedBySpeed.indexOf(engine) + 1
 
                   return (
@@ -213,28 +220,31 @@ export function StreamingRaceView({ onBack }: { onBack: () => void }) {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       className={`p-4 rounded-lg border ${
-                        isWinner 
-                          ? 'border-amber-500/50 bg-amber-500/5' 
+                        isWinner
+                          ? 'border-amber-500/50 bg-amber-500/5'
                           : 'border-border/50 bg-background/50'
                       }`}
                     >
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline">{ENGINE_CONFIGS[engine].name}</Badge>
+                            <Badge variant="outline">
+                              {ENGINE_CONFIGS[engine].name}
+                            </Badge>
                             {isWinner && (
                               <Trophy size={16} className="text-amber-400" />
                             )}
                             {stage === 'complete' && position <= 3 && (
-                              <Badge className="text-xs">
-                                #{position}
-                              </Badge>
+                              <Badge className="text-xs">#{position}</Badge>
                             )}
                           </div>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             {prog && !prog.isComplete && (
                               <div className="flex items-center gap-1">
-                                <CircleNotch size={14} className="animate-spin" />
+                                <CircleNotch
+                                  size={14}
+                                  className="animate-spin"
+                                />
                                 <span>Writing...</span>
                               </div>
                             )}
@@ -258,14 +268,16 @@ export function StreamingRaceView({ onBack }: { onBack: () => void }) {
                             )}
                           </div>
                         </div>
-                        
-                        <Progress 
-                          value={prog ? getProgressPercent(prog) : 0} 
+
+                        <Progress
+                          value={prog ? getProgressPercent(prog) : 0}
                           className="h-2"
                         />
-                        
+
                         {prog?.error && (
-                          <p className="text-xs text-destructive">{prog.error}</p>
+                          <p className="text-xs text-destructive">
+                            {prog.error}
+                          </p>
                         )}
                       </div>
                     </motion.div>
@@ -285,7 +297,9 @@ export function StreamingRaceView({ onBack }: { onBack: () => void }) {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-amber-400">
                           <Trophy size={20} />
-                          <span className="font-semibold">Fastest Completion</span>
+                          <span className="font-semibold">
+                            Fastest Completion
+                          </span>
                         </div>
                         <p className="text-2xl font-bold">
                           {ENGINE_CONFIGS[speedWinner].name}
@@ -296,13 +310,15 @@ export function StreamingRaceView({ onBack }: { onBack: () => void }) {
                       </div>
                     </ConsoleCard>
                   )}
-                  
+
                   {throughputWinner && (
                     <ConsoleCard glass className="p-4">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-blue-400">
                           <Gauge size={20} />
-                          <span className="font-semibold">Highest Throughput</span>
+                          <span className="font-semibold">
+                            Highest Throughput
+                          </span>
                         </div>
                         <p className="text-2xl font-bold">
                           {ENGINE_CONFIGS[throughputWinner].name}
@@ -349,7 +365,11 @@ export function StreamingRaceView({ onBack }: { onBack: () => void }) {
 
               {/* New Race Button */}
               {stage === 'complete' && (
-                <Button onClick={handleNewRace} className="w-full" variant="outline">
+                <Button
+                  onClick={handleNewRace}
+                  className="w-full"
+                  variant="outline"
+                >
                   New Race
                 </Button>
               )}

@@ -32,3 +32,10 @@ pids
 .devcontainer/
 
 .spark-workbench-id
+
+.env.*
+!.env.example
+data/
+*.sqlite*
+test-results/
+playwright-report/

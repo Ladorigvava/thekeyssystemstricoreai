@@ -32,10 +32,10 @@ export interface ResearchReport {
  */
 export async function generateResearchPlan(
   topic: string,
-  depth: 'quick' | 'standard' | 'comprehensive' = 'standard'
+  depth: 'quick' | 'standard' | 'comprehensive' = 'standard',
 ): Promise<ResearchPlan> {
   const stepCount = depth === 'quick' ? 3 : depth === 'standard' ? 5 : 8
-  
+
   const planPrompt = `You are a research strategist. Create a ${depth} research plan for this topic:
 
 TOPIC: ${topic}
@@ -49,30 +49,38 @@ Return ONLY a JSON array of questions, no markdown, no explanation:
 ["question 1", "question 2", ...]`
 
   const response = await streamLLM(planPrompt, 'gpt-4o', () => {})
-  
+
   let cleanedResponse = response.trim()
   if (cleanedResponse.startsWith('```')) {
-    cleanedResponse = cleanedResponse.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    cleanedResponse = cleanedResponse
+      .replace(/^```(?:json)?\n?/, '')
+      .replace(/\n?```$/, '')
   }
-  
+
   const questions = JSON.parse(cleanedResponse) as string[]
-  
+
   // Assign engines in rotation
-  const engines: AIEngine[] = ['gpt-4o', 'claude-3-5-sonnet-20241022', 'gemini-2.0-flash-thinking-exp', 'gpt-4o-mini', 'claude-3-5-haiku-20241022']
-  
+  const engines: AIEngine[] = [
+    'gpt-4o',
+    'claude-sonnet-5',
+    'gemini-2.5-pro',
+    'gpt-4o-mini',
+    'claude-haiku-4-5-20251001',
+  ]
+
   const steps: ResearchStep[] = questions.map((question, index) => ({
     id: `step_${index}`,
     question,
     engine: engines[index % engines.length],
     response: '',
     status: 'pending' as const,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   }))
-  
+
   return {
     topic,
     steps,
-    createdAt: Date.now()
+    createdAt: Date.now(),
   }
 }
 
@@ -81,21 +89,22 @@ Return ONLY a JSON array of questions, no markdown, no explanation:
  */
 export async function executeResearchPlan(
   plan: ResearchPlan,
-  onStepUpdate: (step: ResearchStep) => void
+  onStepUpdate: (step: ResearchStep) => void,
 ): Promise<ResearchReport> {
   const findings: ResearchStep[] = []
-  
+
   // Execute steps sequentially (each builds on previous)
   for (const step of plan.steps) {
     const updatedStep = { ...step, status: 'running' as const }
     onStepUpdate(updatedStep)
-    
+
     try {
       // Build context from previous findings
-      const context = findings.length > 0
-        ? `\n\nPREVIOUS FINDINGS:\n${findings.map((f, i) => `${i + 1}. ${f.question}\n${f.response.substring(0, 200)}...`).join('\n\n')}`
-        : ''
-      
+      const context =
+        findings.length > 0
+          ? `\n\nPREVIOUS FINDINGS:\n${findings.map((f, i) => `${i + 1}. ${f.question}\n${f.response.substring(0, 200)}...`).join('\n\n')}`
+          : ''
+
       const researchPrompt = `You are conducting research on: ${plan.topic}
 
 RESEARCH QUESTION: ${step.question}${context}
@@ -108,40 +117,35 @@ Provide a thorough, well-researched answer. Include:
 - Important nuances or caveats
 
 Be comprehensive but focused.`
-      
-      const response = await streamLLM(
-        researchPrompt,
-        step.engine,
-        (chunk) => {
-          onStepUpdate({ ...updatedStep, response: updatedStep.response + chunk })
-        }
-      )
-      
+
+      const response = await streamLLM(researchPrompt, step.engine, (chunk) => {
+        onStepUpdate({ ...updatedStep, response: updatedStep.response + chunk })
+      })
+
       const completedStep = {
         ...step,
         response,
         status: 'complete' as const,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
-      
+
       findings.push(completedStep)
       onStepUpdate(completedStep)
-      
     } catch (error) {
       const errorStep = {
         ...step,
         status: 'error' as const,
         error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
       findings.push(errorStep)
       onStepUpdate(errorStep)
     }
   }
-  
+
   // Generate synthesis
   const synthesis = await synthesizeResearch(plan.topic, findings)
-  
+
   return {
     topic: plan.topic,
     executiveSummary: synthesis.summary,
@@ -149,21 +153,24 @@ Be comprehensive but focused.`
     synthesis: synthesis.fullSynthesis,
     recommendations: synthesis.recommendations,
     sources: synthesis.sources,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   }
 }
 
-async function synthesizeResearch(topic: string, findings: ResearchStep[]): Promise<{
+async function synthesizeResearch(
+  topic: string,
+  findings: ResearchStep[],
+): Promise<{
   summary: string
   fullSynthesis: string
   recommendations: string[]
   sources: string[]
 }> {
   const findingsText = findings
-    .filter(f => f.status === 'complete')
+    .filter((f) => f.status === 'complete')
     .map((f, i) => `**Q${i + 1}: ${f.question}**\n${f.response}`)
     .join('\n\n---\n\n')
-  
+
   const synthesisPrompt = `You are synthesizing research on: ${topic}
 
 RESEARCH FINDINGS:
@@ -178,12 +185,14 @@ Create a comprehensive synthesis in valid JSON format (no markdown, no code bloc
 }`
 
   const response = await streamLLM(synthesisPrompt, 'gpt-4o', () => {})
-  
+
   let cleanedResponse = response.trim()
   if (cleanedResponse.startsWith('```')) {
-    cleanedResponse = cleanedResponse.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    cleanedResponse = cleanedResponse
+      .replace(/^```(?:json)?\n?/, '')
+      .replace(/\n?```$/, '')
   }
-  
+
   return JSON.parse(cleanedResponse)
 }
 
@@ -201,13 +210,17 @@ ${report.executiveSummary}
 
 ## Research Findings
 
-${report.findings.map((f, i) => `### ${i + 1}. ${f.question}
+${report.findings
+  .map(
+    (f, i) => `### ${i + 1}. ${f.question}
 
 **Engine:** ${f.engine}
 **Status:** ${f.status}
 
 ${f.response}
-`).join('\n\n')}
+`,
+  )
+  .join('\n\n')}
 
 ## Synthesis
 

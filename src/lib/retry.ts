@@ -34,7 +34,7 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
     '502',
     '503',
     '504',
-  ]
+  ],
 }
 
 /**
@@ -42,7 +42,9 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
  */
 function isRetryableError(error: Error, retryableErrors: string[]): boolean {
   const errorMessage = error.message.toLowerCase()
-  return retryableErrors.some(pattern => errorMessage.includes(pattern.toLowerCase()))
+  return retryableErrors.some((pattern) =>
+    errorMessage.includes(pattern.toLowerCase()),
+  )
 }
 
 /**
@@ -52,9 +54,10 @@ function calculateDelay(
   attempt: number,
   initialDelay: number,
   maxDelay: number,
-  backoffMultiplier: number
+  backoffMultiplier: number,
 ): number {
-  const exponentialDelay = initialDelay * Math.pow(backoffMultiplier, attempt - 1)
+  const exponentialDelay =
+    initialDelay * Math.pow(backoffMultiplier, attempt - 1)
   const delay = Math.min(exponentialDelay, maxDelay)
   // Add jitter (±25% randomness) to prevent thundering herd
   const jitter = delay * 0.25 * (Math.random() * 2 - 1)
@@ -65,7 +68,7 @@ function calculateDelay(
  * Wait for a specified duration
  */
 function wait(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
@@ -76,16 +79,20 @@ export function getFallbackEngine(engine: AIEngine): AIEngine | null {
   if (!config) return null
 
   const provider = config.provider
-  
+
   // Find a cheaper/faster alternative from the same provider
   const fallbackOptions: Record<string, AIEngine[]> = {
-    'openai': ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'],
-    'anthropic': ['claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022', 'claude-3-7-sonnet-20250219'],
-    'google': ['gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro']
+    openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-5.2'],
+    anthropic: [
+      'claude-haiku-4-5-20251001',
+      'claude-sonnet-5',
+      'claude-sonnet-5',
+    ],
+    google: ['gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
   }
 
   const alternatives = fallbackOptions[provider] || []
-  
+
   // Find first alternative that's different from current engine
   for (const alt of alternatives) {
     if (alt !== engine) {
@@ -101,7 +108,7 @@ export function getFallbackEngine(engine: AIEngine): AIEngine | null {
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): Promise<RetryResult<T>> {
   const opts = { ...DEFAULT_OPTIONS, ...options }
   let lastError: Error | undefined
@@ -109,20 +116,20 @@ export async function withRetry<T>(
 
   for (let attempt = 1; attempt <= opts.maxRetries; attempt++) {
     attemptCount = attempt
-    
+
     try {
       const data = await fn()
       return {
         success: true,
         data,
-        attemptCount
+        attemptCount,
       }
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
-      
+
       // Check if error is retryable
       const shouldRetry = isRetryableError(lastError, opts.retryableErrors)
-      
+
       // If last attempt or not retryable, don't retry
       if (attempt === opts.maxRetries || !shouldRetry) {
         break
@@ -133,10 +140,12 @@ export async function withRetry<T>(
         attempt,
         opts.initialDelay,
         opts.maxDelay,
-        opts.backoffMultiplier
+        opts.backoffMultiplier,
       )
-      
-      console.log(`Retry attempt ${attempt}/${opts.maxRetries} after ${Math.round(delay)}ms. Error: ${lastError.message}`)
+
+      console.log(
+        `Retry attempt ${attempt}/${opts.maxRetries} after ${Math.round(delay)}ms. Error: ${lastError.message}`,
+      )
       await wait(delay)
     }
   }
@@ -144,7 +153,7 @@ export async function withRetry<T>(
   return {
     success: false,
     error: lastError,
-    attemptCount
+    attemptCount,
   }
 }
 
@@ -154,36 +163,38 @@ export async function withRetry<T>(
 export async function withRetryAndFallback<T>(
   fn: (engine: AIEngine) => Promise<T>,
   primaryEngine: AIEngine,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): Promise<RetryResult<T>> {
   // First try with primary engine and retry
   const primaryResult = await withRetry(() => fn(primaryEngine), options)
-  
+
   if (primaryResult.success) {
     return primaryResult
   }
 
   // If primary failed, try fallback engine
   const fallbackEngine = getFallbackEngine(primaryEngine)
-  
+
   if (!fallbackEngine) {
     // No fallback available, return primary error
     return primaryResult
   }
 
-  console.log(`Primary engine ${primaryEngine} failed. Trying fallback: ${fallbackEngine}`)
-  
-  // Try fallback with reduced retry count (1 attempt only)
-  const fallbackResult = await withRetry(
-    () => fn(fallbackEngine),
-    { ...options, maxRetries: 1 }
+  console.log(
+    `Primary engine ${primaryEngine} failed. Trying fallback: ${fallbackEngine}`,
   )
+
+  // Try fallback with reduced retry count (1 attempt only)
+  const fallbackResult = await withRetry(() => fn(fallbackEngine), {
+    ...options,
+    maxRetries: 1,
+  })
 
   if (fallbackResult.success) {
     return {
       ...fallbackResult,
       fallbackUsed: true,
-      fallbackEngine
+      fallbackEngine,
     }
   }
 
@@ -201,35 +212,53 @@ export function categorizeError(error: Error): {
 } {
   const errorMsg = error.message.toLowerCase()
 
-  if (errorMsg.includes('429') || errorMsg.includes('rate limit') || errorMsg.includes('too many requests')) {
+  if (
+    errorMsg.includes('429') ||
+    errorMsg.includes('rate limit') ||
+    errorMsg.includes('too many requests')
+  ) {
     return {
       type: 'rate_limit',
       isRetryable: true,
-      message: 'Rate limit exceeded. Retrying with delay...'
+      message: 'Rate limit exceeded. Retrying with delay...',
     }
   }
 
-  if (errorMsg.includes('401') || errorMsg.includes('403') || errorMsg.includes('unauthorized') || errorMsg.includes('forbidden')) {
+  if (
+    errorMsg.includes('401') ||
+    errorMsg.includes('403') ||
+    errorMsg.includes('unauthorized') ||
+    errorMsg.includes('forbidden')
+  ) {
     return {
       type: 'auth',
       isRetryable: false,
-      message: 'Authentication failed. Please check your API keys.'
+      message: 'Authentication failed. Please check your API keys.',
     }
   }
 
-  if (errorMsg.includes('network') || errorMsg.includes('fetch') || errorMsg.includes('connection')) {
+  if (
+    errorMsg.includes('network') ||
+    errorMsg.includes('fetch') ||
+    errorMsg.includes('connection')
+  ) {
     return {
       type: 'network',
       isRetryable: true,
-      message: 'Network error. Retrying...'
+      message: 'Network error. Retrying...',
     }
   }
 
-  if (errorMsg.includes('500') || errorMsg.includes('502') || errorMsg.includes('503') || errorMsg.includes('504')) {
+  if (
+    errorMsg.includes('500') ||
+    errorMsg.includes('502') ||
+    errorMsg.includes('503') ||
+    errorMsg.includes('504')
+  ) {
     return {
       type: 'server',
       isRetryable: true,
-      message: 'Server error. Retrying...'
+      message: 'Server error. Retrying...',
     }
   }
 
@@ -237,13 +266,13 @@ export function categorizeError(error: Error): {
     return {
       type: 'client',
       isRetryable: false,
-      message: 'Invalid request. Please check your input.'
+      message: 'Invalid request. Please check your input.',
     }
   }
 
   return {
     type: 'unknown',
     isRetryable: true,
-    message: 'Request failed. Retrying...'
+    message: 'Request failed. Retrying...',
   }
 }

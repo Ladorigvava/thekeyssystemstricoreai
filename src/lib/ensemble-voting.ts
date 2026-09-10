@@ -35,36 +35,39 @@ export async function runEnsembleVoting(
   engines: AIEngine[],
   judgeEngines: AIEngine[],
   onResponseUpdate: (engine: AIEngine, partial: string) => void,
-  onVoteUpdate?: (vote: JudgeVote) => void
+  onVoteUpdate?: (vote: JudgeVote) => void,
 ): Promise<EnsembleResult> {
   if (engines.length < 3) {
     throw new Error('Ensemble voting requires at least 3 engines')
   }
-  
+
   // Phase 1: Get responses from all engines in parallel
   const responsesMap = new Map<AIEngine, string>()
-  
+
   const responsePromises = engines.map(async (engine) => {
     const params = getParametersForEngine(engine)
     const response = await streamLLM(
       question,
       engine,
       (chunk) => onResponseUpdate(engine, chunk),
-      params
+      params,
     )
     responsesMap.set(engine, response)
     return { engine, response, timestamp: Date.now() }
   })
-  
+
   const responses = await Promise.all(responsePromises)
-  
+
   // Phase 2: Have judges vote on the best response
   const votes: JudgeVote[] = []
-  
+
   const responsesText = responses
-    .map((r, i) => `**Response ${i + 1} (from ${ENGINE_CONFIGS[r.engine].name}):**\n${r.response}`)
+    .map(
+      (r, i) =>
+        `**Response ${i + 1} (from ${ENGINE_CONFIGS[r.engine].name}):**\n${r.response}`,
+    )
     .join('\n\n---\n\n')
-  
+
   const votePromises = judgeEngines.map(async (judgeEngine) => {
     const votePrompt = `You are an AI judge evaluating multiple AI responses to select the best one.
 
@@ -91,65 +94,76 @@ Return your verdict in valid JSON format (no markdown, no code blocks):
 
     try {
       const voteResponse = await streamLLM(votePrompt, judgeEngine, () => {})
-      
+
       let cleanedResponse = voteResponse.trim()
       if (cleanedResponse.startsWith('```')) {
-        cleanedResponse = cleanedResponse.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+        cleanedResponse = cleanedResponse
+          .replace(/^```(?:json)?\n?/, '')
+          .replace(/\n?```$/, '')
       }
-      
+
       const voteData = JSON.parse(cleanedResponse)
+      if (
+        !Number.isInteger(voteData.votedFor) ||
+        voteData.votedFor < 1 ||
+        voteData.votedFor > responses.length ||
+        !Number.isFinite(voteData.score) ||
+        voteData.score < 1 ||
+        voteData.score > 10 ||
+        !Number.isFinite(voteData.confidence) ||
+        voteData.confidence < 0 ||
+        voteData.confidence > 100 ||
+        typeof voteData.reasoning !== 'string'
+      )
+        throw new Error('Invalid judge verdict')
       const votedForEngine = responses[voteData.votedFor - 1].engine
-      
+
       const vote: JudgeVote = {
         engine: judgeEngine,
         votedFor: votedForEngine,
         score: voteData.score,
         reasoning: voteData.reasoning,
-        confidence: voteData.confidence
+        confidence: voteData.confidence,
       }
-      
+
       votes.push(vote)
       if (onVoteUpdate) {
         onVoteUpdate(vote)
       }
-      
+
       return vote
     } catch (error) {
       console.error(`Vote error from ${judgeEngine}:`, error)
-      // Fallback vote
-      const fallbackVote: JudgeVote = {
-        engine: judgeEngine,
-        votedFor: responses[0].engine,
-        score: 5,
-        reasoning: 'Error occurred during voting',
-        confidence: 0
-      }
-      votes.push(fallbackVote)
-      if (onVoteUpdate) {
-        onVoteUpdate(fallbackVote)
-      }
-      return fallbackVote
+      throw new Error(
+        `Judge ${judgeEngine} did not return a valid verdict. No fallback vote was created.`,
+      )
     }
   })
-  
+
   await Promise.all(votePromises)
-  
+
   // Determine winner based on weighted votes
-  const scoresByEngine = new Map<AIEngine, { totalScore: number; voteCount: number }>()
-  
-  votes.forEach(vote => {
-    const current = scoresByEngine.get(vote.votedFor) || { totalScore: 0, voteCount: 0 }
+  const scoresByEngine = new Map<
+    AIEngine,
+    { totalScore: number; voteCount: number }
+  >()
+
+  votes.forEach((vote) => {
+    const current = scoresByEngine.get(vote.votedFor) || {
+      totalScore: 0,
+      voteCount: 0,
+    }
     // Weight by confidence
     const weightedScore = (vote.score * vote.confidence) / 100
     scoresByEngine.set(vote.votedFor, {
       totalScore: current.totalScore + weightedScore,
-      voteCount: current.voteCount + 1
+      voteCount: current.voteCount + 1,
     })
   })
-  
+
   let winner: AIEngine = engines[0]
   let winnerScore = 0
-  
+
   scoresByEngine.forEach((data, engine) => {
     const avgScore = data.totalScore / data.voteCount
     if (avgScore > winnerScore) {
@@ -157,10 +171,10 @@ Return your verdict in valid JSON format (no markdown, no code blocks):
       winner = engine
     }
   })
-  
+
   // Generate consensus summary
   const consensus = await generateConsensus(question, responses, votes, winner)
-  
+
   return {
     question,
     responses,
@@ -169,7 +183,7 @@ Return your verdict in valid JSON format (no markdown, no code blocks):
     winnerScore,
     winnerResponse: responsesMap.get(winner) || '',
     consensus,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   }
 }
 
@@ -177,12 +191,15 @@ async function generateConsensus(
   question: string,
   responses: EnsembleResponse[],
   votes: JudgeVote[],
-  winner: AIEngine
+  winner: AIEngine,
 ): Promise<string> {
   const voteSummary = votes
-    .map(v => `- ${ENGINE_CONFIGS[v.engine].name} voted for ${ENGINE_CONFIGS[v.votedFor].name} (${v.score}/10, ${v.confidence}% confident): ${v.reasoning}`)
+    .map(
+      (v) =>
+        `- ${ENGINE_CONFIGS[v.engine].name} voted for ${ENGINE_CONFIGS[v.votedFor].name} (${v.score}/10, ${v.confidence}% confident): ${v.reasoning}`,
+    )
     .join('\n')
-  
+
   const consensusPrompt = `Synthesize the ensemble voting results into a consensus statement.
 
 QUESTION: ${question}
@@ -206,7 +223,7 @@ Create a 2-3 sentence consensus that explains:
  */
 export function getVoteDistribution(votes: JudgeVote[]): Map<AIEngine, number> {
   const distribution = new Map<AIEngine, number>()
-  votes.forEach(vote => {
+  votes.forEach((vote) => {
     distribution.set(vote.votedFor, (distribution.get(vote.votedFor) || 0) + 1)
   })
   return distribution
@@ -226,7 +243,7 @@ export function getAverageConfidence(votes: JudgeVote[]): number {
  */
 export function getHighestConfidenceVote(votes: JudgeVote[]): JudgeVote | null {
   if (votes.length === 0) return null
-  return votes.reduce((highest, vote) => 
-    vote.confidence > highest.confidence ? vote : highest
+  return votes.reduce((highest, vote) =>
+    vote.confidence > highest.confidence ? vote : highest,
   )
 }

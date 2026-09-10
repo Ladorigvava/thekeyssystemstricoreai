@@ -10,17 +10,20 @@ import { Separator } from '@/components/ui/separator'
 import { AIEngine, ENGINE_CONFIGS, AIProvider } from '@/lib/engines'
 import { streamLLM } from '@/lib/llm'
 import { logCost, estimateQueryCost, formatCost } from '@/lib/cost-tracking'
-import { exportMultipleEntriesAsMarkdown, exportMultipleEntriesAsJSON } from '@/lib/export'
+import {
+  exportMultipleEntriesAsMarkdown,
+  exportMultipleEntriesAsJSON,
+} from '@/lib/export'
 import { HistoryEntry } from '@/lib/history'
-import { 
-  ArrowLeft, 
-  Atom, 
-  CircleNotch, 
-  Lightning, 
-  Gauge, 
-  Rocket, 
+import {
+  ArrowLeft,
+  Atom,
+  CircleNotch,
+  Lightning,
+  Gauge,
+  Rocket,
   Brain,
-  Coin
+  Coin,
 } from '@phosphor-icons/react'
 import { Download, FileText, FileJson } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -42,16 +45,22 @@ interface ComparisonResult {
 
 const DEFAULT_ENGINES: AIEngine[] = [
   'gpt-4o',
-  'claude-3-5-sonnet-20241022',
-  'gemini-2.0-flash-exp'
+  'claude-sonnet-5',
+  'gemini-2.5-flash',
 ]
 
 export function ComparisonView({ onBack }: ComparisonViewProps) {
   const [input, setInput] = useState('')
-  const [selectedEngines, setSelectedEngines] = useState<Set<AIEngine>>(new Set(DEFAULT_ENGINES))
-  const [results, setResults] = useState<Map<AIEngine, ComparisonResult>>(new Map())
+  const [selectedEngines, setSelectedEngines] = useState<Set<AIEngine>>(
+    new Set(DEFAULT_ENGINES),
+  )
+  const [results, setResults] = useState<Map<AIEngine, ComparisonResult>>(
+    new Map(),
+  )
   const [isRunning, setIsRunning] = useState(false)
-  const [filterProvider, setFilterProvider] = useState<AIProvider | 'all'>('all')
+  const [filterProvider, setFilterProvider] = useState<AIProvider | 'all'>(
+    'all',
+  )
 
   const handleEngineToggle = (engine: AIEngine) => {
     const newSelected = new Set(selectedEngines)
@@ -78,7 +87,7 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
     const newResults = new Map<AIEngine, ComparisonResult>()
 
     // Initialize all results
-    selectedEngines.forEach(engine => {
+    selectedEngines.forEach((engine) => {
       newResults.set(engine, {
         engine,
         output: '',
@@ -86,7 +95,7 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
         error: null,
         startTime: Date.now(),
         endTime: null,
-        cost: 0
+        cost: 0,
       })
     })
     setResults(newResults)
@@ -95,31 +104,27 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
     const promises = Array.from(selectedEngines).map(async (engine) => {
       const startTime = Date.now()
       try {
-        const result = await streamLLM(
-          input,
-          engine,
-          (chunk) => {
-            setResults(prev => {
-              const updated = new Map(prev)
-              const current = updated.get(engine)
-              if (current) {
-                updated.set(engine, {
-                  ...current,
-                  output: chunk
-                })
-              }
-              return updated
-            })
-          }
-        )
+        const result = await streamLLM(input, engine, (chunk) => {
+          setResults((prev) => {
+            const updated = new Map(prev)
+            const current = updated.get(engine)
+            if (current) {
+              updated.set(engine, {
+                ...current,
+                output: chunk,
+              })
+            }
+            return updated
+          })
+        })
 
         const endTime = Date.now()
         const cost = estimateQueryCost(engine, input, result.length)
-        
+
         // Log cost
         logCost(engine, input, result, 'comparison')
 
-        setResults(prev => {
+        setResults((prev) => {
           const updated = new Map(prev)
           const current = updated.get(engine)
           if (current) {
@@ -128,14 +133,14 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
               output: result,
               isLoading: false,
               endTime,
-              cost
+              cost,
             })
           }
           return updated
         })
       } catch (error) {
         const endTime = Date.now()
-        setResults(prev => {
+        setResults((prev) => {
           const updated = new Map(prev)
           const current = updated.get(engine)
           if (current) {
@@ -143,7 +148,7 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
               ...current,
               isLoading: false,
               error: error instanceof Error ? error.message : 'Unknown error',
-              endTime
+              endTime,
             })
           }
           return updated
@@ -158,23 +163,38 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
 
   const getSpeedIcon = (speed: string) => {
     switch (speed) {
-      case 'fast': return <Lightning size={16} weight="fill" className="text-emerald-400" />
-      case 'balanced': return <Gauge size={16} weight="fill" className="text-amber-400" />
-      case 'powerful': return <Rocket size={16} weight="fill" className="text-primary" />
-      case 'ultra': return <Brain size={16} weight="fill" className="text-violet-400" />
-      default: return null
+      case 'fast':
+        return (
+          <Lightning size={16} weight="fill" className="text-emerald-400" />
+        )
+      case 'balanced':
+        return <Gauge size={16} weight="fill" className="text-amber-400" />
+      case 'powerful':
+        return <Rocket size={16} weight="fill" className="text-primary" />
+      case 'ultra':
+        return <Brain size={16} weight="fill" className="text-violet-400" />
+      default:
+        return null
     }
   }
 
   const filteredEngines = Object.entries(ENGINE_CONFIGS)
-    .filter(([_, config]) => filterProvider === 'all' || config.provider === filterProvider)
+    .filter(
+      ([_, config]) =>
+        filterProvider === 'all' || config.provider === filterProvider,
+    )
     .map(([key, config]) => ({ key: key as AIEngine, ...config }))
 
-  const totalEstimatedCost = Array.from(selectedEngines).reduce((sum, engine) => {
-    return sum + estimateQueryCost(engine, input, 1000)
-  }, 0)
+  const totalEstimatedCost = Array.from(selectedEngines).reduce(
+    (sum, engine) => {
+      return sum + estimateQueryCost(engine, input, 1000)
+    },
+    0,
+  )
 
-  const completedResults = Array.from(results.values()).filter(r => !r.isLoading && !r.error)
+  const completedResults = Array.from(results.values()).filter(
+    (r) => !r.isLoading && !r.error,
+  )
   const totalActualCost = completedResults.reduce((sum, r) => sum + r.cost, 0)
 
   return (
@@ -203,7 +223,11 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
                   AI Model Comparison Engine
                 </div>
                 <div className="flex items-center gap-2">
-                  <Atom size={24} weight="duotone" className="text-accent shrink-0" />
+                  <Atom
+                    size={24}
+                    weight="duotone"
+                    className="text-accent shrink-0"
+                  />
                   <h1 className="text-xl md:text-2xl font-bold tracking-tight truncate">
                     Side-by-Side Model Comparison
                   </h1>
@@ -211,7 +235,8 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
               </div>
             </div>
             <p className="text-sm text-muted-foreground mt-3 ml-7">
-              Run the same prompt across multiple AI engines and compare results, speed, and cost
+              Run the same prompt across multiple AI engines and compare
+              results, speed, and cost
             </p>
           </div>
         </motion.div>
@@ -231,17 +256,21 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
                 className="min-h-32 resize-none text-sm mb-3"
                 disabled={isRunning}
               />
-              
+
               {selectedEngines.size > 0 && input && (
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-3 p-2 bg-secondary/10 rounded">
                   <span>Estimated cost:</span>
-                  <span className="font-medium text-amber-400">{formatCost(totalEstimatedCost)}</span>
+                  <span className="font-medium text-amber-400">
+                    {formatCost(totalEstimatedCost)}
+                  </span>
                 </div>
               )}
 
-              <Button 
+              <Button
                 onClick={handleRunComparison}
-                disabled={isRunning || selectedEngines.size === 0 || !input.trim()}
+                disabled={
+                  isRunning || selectedEngines.size === 0 || !input.trim()
+                }
                 className="w-full glow-accent"
               >
                 {isRunning ? (
@@ -261,23 +290,31 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
                   <Lightning size={18} weight="bold" className="text-primary" />
                   Select Engines
                 </span>
-                <span className="text-xs text-muted-foreground">{selectedEngines.size} selected</span>
+                <span className="text-xs text-muted-foreground">
+                  {selectedEngines.size} selected
+                </span>
               </h3>
 
               <div className="flex gap-1 mb-3">
-                {(['all', 'openai', 'anthropic', 'google'] as const).map((provider) => (
-                  <Button
-                    key={provider}
-                    variant={filterProvider === provider ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setFilterProvider(provider)}
-                    className={`h-7 px-2.5 text-xs ${
-                      filterProvider === provider ? 'glow-primary' : ''
-                    }`}
-                  >
-                    {provider === 'all' ? 'All' : provider.charAt(0).toUpperCase() + provider.slice(1)}
-                  </Button>
-                ))}
+                {(['all', 'openai', 'anthropic', 'google'] as const).map(
+                  (provider) => (
+                    <Button
+                      key={provider}
+                      variant={
+                        filterProvider === provider ? 'default' : 'ghost'
+                      }
+                      size="sm"
+                      onClick={() => setFilterProvider(provider)}
+                      className={`h-7 px-2.5 text-xs ${
+                        filterProvider === provider ? 'glow-primary' : ''
+                      }`}
+                    >
+                      {provider === 'all'
+                        ? 'All'
+                        : provider.charAt(0).toUpperCase() + provider.slice(1)}
+                    </Button>
+                  ),
+                )}
               </div>
 
               <ScrollArea className="h-[400px]">
@@ -297,9 +334,13 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           {getSpeedIcon(engine.speed)}
-                          <span className="text-sm font-medium truncate">{engine.name}</span>
+                          <span className="text-sm font-medium truncate">
+                            {engine.name}
+                          </span>
                         </div>
-                        <div className="text-xs text-muted-foreground truncate">{engine.description}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {engine.description}
+                        </div>
                       </div>
                       <Badge variant="outline" className="text-xs shrink-0">
                         {engine.costTier}
@@ -315,10 +356,15 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
           <div className="lg:col-span-2">
             {results.size === 0 ? (
               <ConsoleCard glass className="p-8 text-center">
-                <Atom size={64} weight="duotone" className="text-muted-foreground/20 mx-auto mb-4" />
+                <Atom
+                  size={64}
+                  weight="duotone"
+                  className="text-muted-foreground/20 mx-auto mb-4"
+                />
                 <h3 className="text-lg font-semibold mb-2">Ready to Compare</h3>
                 <p className="text-sm text-muted-foreground">
-                  Select engines and enter a prompt to see side-by-side comparisons
+                  Select engines and enter a prompt to see side-by-side
+                  comparisons
                 </p>
               </ConsoleCard>
             ) : (
@@ -328,38 +374,58 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
                     <ConsoleCard glass className="p-4">
                       <div className="grid grid-cols-3 gap-4 text-center">
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Fastest</div>
+                          <div className="text-xs text-muted-foreground mb-1">
+                            Fastest
+                          </div>
                           <div className="text-sm font-semibold">
                             {(() => {
-                              const fastest = completedResults.reduce((min, r) => 
-                                (r.endTime! - r.startTime) < (min.endTime! - min.startTime) ? r : min
+                              const fastest = completedResults.reduce(
+                                (min, r) =>
+                                  r.endTime! - r.startTime <
+                                  min.endTime! - min.startTime
+                                    ? r
+                                    : min,
                               )
                               return ENGINE_CONFIGS[fastest.engine].name
                             })()}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {(() => {
-                              const fastest = completedResults.reduce((min, r) => 
-                                (r.endTime! - r.startTime) < (min.endTime! - min.startTime) ? r : min
+                              const fastest = completedResults.reduce(
+                                (min, r) =>
+                                  r.endTime! - r.startTime <
+                                  min.endTime! - min.startTime
+                                    ? r
+                                    : min,
                               )
                               return `${((fastest.endTime! - fastest.startTime) / 1000).toFixed(1)}s`
                             })()}
                           </div>
                         </div>
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Cheapest</div>
+                          <div className="text-xs text-muted-foreground mb-1">
+                            Cheapest
+                          </div>
                           <div className="text-sm font-semibold">
                             {(() => {
-                              const cheapest = completedResults.reduce((min, r) => r.cost < min.cost ? r : min)
+                              const cheapest = completedResults.reduce(
+                                (min, r) => (r.cost < min.cost ? r : min),
+                              )
                               return ENGINE_CONFIGS[cheapest.engine].name
                             })()}
                           </div>
                           <div className="text-xs text-amber-400">
-                            {formatCost(completedResults.reduce((min, r) => r.cost < min.cost ? r : min).cost)}
+                            {formatCost(
+                              completedResults.reduce((min, r) =>
+                                r.cost < min.cost ? r : min,
+                              ).cost,
+                            )}
                           </div>
                         </div>
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Total Cost</div>
+                          <div className="text-xs text-muted-foreground mb-1">
+                            Total Cost
+                          </div>
                           <div className="text-sm font-semibold text-amber-400">
                             {formatCost(totalActualCost)}
                           </div>
@@ -384,16 +450,19 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              const entries: HistoryEntry[] = completedResults.map(result => ({
-                                id: `${Date.now()}-${result.engine}`,
-                                mode: 'comparison',
-                                input: input,
-                                output: result.output,
-                                timestamp: result.startTime,
-                                engine: result.engine
-                              }))
+                              const entries: HistoryEntry[] =
+                                completedResults.map((result) => ({
+                                  id: `${Date.now()}-${result.engine}`,
+                                  mode: 'comparison',
+                                  input: input,
+                                  output: result.output,
+                                  timestamp: result.startTime,
+                                  engine: result.engine,
+                                }))
                               exportMultipleEntriesAsMarkdown(entries)
-                              toast.success(`Exported ${completedResults.length} results as Markdown`)
+                              toast.success(
+                                `Exported ${completedResults.length} results as Markdown`,
+                              )
                             }}
                             className="gap-2"
                           >
@@ -404,16 +473,19 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              const entries: HistoryEntry[] = completedResults.map(result => ({
-                                id: `${Date.now()}-${result.engine}`,
-                                mode: 'comparison',
-                                input: input,
-                                output: result.output,
-                                timestamp: result.startTime,
-                                engine: result.engine
-                              }))
+                              const entries: HistoryEntry[] =
+                                completedResults.map((result) => ({
+                                  id: `${Date.now()}-${result.engine}`,
+                                  mode: 'comparison',
+                                  input: input,
+                                  output: result.output,
+                                  timestamp: result.startTime,
+                                  engine: result.engine,
+                                }))
                               exportMultipleEntriesAsJSON(entries)
-                              toast.success(`Exported ${completedResults.length} results as JSON`)
+                              toast.success(
+                                `Exported ${completedResults.length} results as JSON`,
+                              )
                             }}
                             className="gap-2"
                           >
@@ -429,7 +501,9 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
                 <AnimatePresence mode="popLayout">
                   {Array.from(results.values()).map((result) => {
                     const config = ENGINE_CONFIGS[result.engine]
-                    const duration = result.endTime ? (result.endTime - result.startTime) / 1000 : 0
+                    const duration = result.endTime
+                      ? (result.endTime - result.startTime) / 1000
+                      : 0
 
                     return (
                       <motion.div
@@ -452,19 +526,28 @@ export function ComparisonView({ onBack }: ComparisonViewProps) {
                                 <span>{duration.toFixed(1)}s</span>
                               )}
                               {result.cost > 0 && (
-                                <span className="text-amber-400">{formatCost(result.cost)}</span>
+                                <span className="text-amber-400">
+                                  {formatCost(result.cost)}
+                                </span>
                               )}
                             </div>
                           </div>
 
                           {result.isLoading ? (
                             <div className="py-8 text-center">
-                              <CircleNotch className="animate-spin mx-auto mb-2" size={24} />
-                              <p className="text-sm text-muted-foreground">Generating response...</p>
+                              <CircleNotch
+                                className="animate-spin mx-auto mb-2"
+                                size={24}
+                              />
+                              <p className="text-sm text-muted-foreground">
+                                Generating response...
+                              </p>
                             </div>
                           ) : result.error ? (
                             <div className="py-4 px-3 bg-red-500/10 border border-red-500/20 rounded">
-                              <p className="text-sm text-red-400">⚠️ {result.error}</p>
+                              <p className="text-sm text-red-400">
+                                ⚠️ {result.error}
+                              </p>
                             </div>
                           ) : (
                             <ScrollArea className="h-[300px]">

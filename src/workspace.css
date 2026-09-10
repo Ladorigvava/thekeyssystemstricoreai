@@ -1,0 +1,168 @@
+/* Extend the existing dark command console with readable, responsive work surfaces. */
+:root {
+  --primary: #13c7d1;
+  --primary-foreground: #001d22;
+  --accent: #ff994e;
+}
+html {
+  font-size: 16px;
+}
+body {
+  min-width: 320px;
+}
+.app-content {
+  container-type: inline-size;
+}
+.service-status {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+}
+.tri-workspace {
+  padding: 1.5rem;
+  max-width: 1700px;
+  margin: auto;
+}
+.tri-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.tri-heading h1 {
+  font-size: clamp(1.5rem, 2.3vw, 2rem);
+  font-weight: 650;
+  line-height: 1.25;
+  margin: 0.3rem 0 0.6rem;
+}
+.tri-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.tri-run-count {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+.tri-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+.tri-console {
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--card);
+  padding: 1.25rem;
+}
+.tri-core-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 265px), 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+.tri-core {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--core-color);
+  border-radius: 1.25rem;
+  background: var(--card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.tri-core-chadrak {
+  --core-color: #16c6e2;
+}
+.tri-core-nova {
+  --core-color: #a48aff;
+}
+.tri-core-triad {
+  --core-color: #24c89b;
+}
+.tri-core-settings {
+  padding: 1.15rem;
+  border-bottom: 1px solid var(--border);
+}
+.tri-core-settings h2 {
+  color: var(--core-color);
+  font-size: 1rem;
+  font-weight: 650;
+}
+.tri-core-settings button {
+  white-space: normal;
+}
+.tri-core-output {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 24rem;
+}
+.tri-core-output > div {
+  min-height: 22rem;
+  flex: 1;
+}
+.tri-provenance {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  padding: 1rem;
+  overflow-wrap: anywhere;
+  color: var(--muted-foreground);
+  border-top: 1px solid var(--border);
+}
+.tri-history {
+  min-width: 0;
+  height: 34rem;
+}
+.engine-picker {
+  width: 100%;
+  min-width: 0;
+}
+.engine-provider {
+  max-width: 100%;
+  font-size: 0.875rem;
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+[data-slot='select-trigger'] {
+  overflow: hidden;
+}
+[data-slot='dialog-content'] {
+  max-width: min(70rem, calc(100vw - 2rem));
+}
+@container (min-width: 1300px) {
+  .tri-layout {
+    grid-template-columns: minmax(0, 1fr) 260px;
+  }
+}
+@media (max-width: 1023px) {
+  .app-content {
+    padding-top: 4.5rem;
+  }
+  .service-status {
+    padding: 1rem;
+  }
+}
+@media (max-width: 640px) {
+  .tri-workspace {
+    padding: 1rem;
+  }
+  .tri-heading {
+    margin-bottom: 1.2rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

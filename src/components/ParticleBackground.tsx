@@ -20,6 +20,7 @@ export function ParticleBackground() {
   const { theme } = useTheme()
 
   useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -50,7 +51,10 @@ export function ParticleBackground() {
 
     const colors = theme === 'dark' ? darkColors : lightColors
 
-    const particleCount = Math.min(150, Math.floor((canvas.width * canvas.height) / 15000))
+    const particleCount = Math.min(
+      150,
+      Math.floor((canvas.width * canvas.height) / 15000),
+    )
 
     particlesRef.current = Array.from({ length: particleCount }, () => ({
       x: Math.random() * canvas.width,
@@ -74,12 +78,14 @@ export function ParticleBackground() {
       const deltaTime = currentTime - lastTime
       lastTime = currentTime
 
-      const clearColor = theme === 'dark' ? 'rgba(6, 10, 26, 0.1)' : 'rgba(250, 250, 252, 0.15)'
+      const clearColor =
+        theme === 'dark' ? 'rgba(6, 10, 26, 0.1)' : 'rgba(250, 250, 252, 0.15)'
       ctx.fillStyle = clearColor
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       const particles = particlesRef.current
-      const lineColor = theme === 'dark' ? 'rgba(6, 182, 212, ' : 'rgba(6, 120, 140, '
+      const lineColor =
+        theme === 'dark' ? 'rgba(6, 182, 212, ' : 'rgba(6, 120, 140, '
 
       // First pass: update positions and draw particles
       for (let i = 0; i < particles.length; i++) {
@@ -96,7 +102,7 @@ export function ParticleBackground() {
         const dx = mouseRef.current.x - particle.x
         const dy = mouseRef.current.y - particle.y
         const distance = Math.sqrt(dx * dx + dy * dy)
-        
+
         if (distance < 150) {
           const force = (150 - distance) / 150
           particle.vx -= (dx / distance) * force * 0.02
@@ -126,7 +132,8 @@ export function ParticleBackground() {
           const distanceSquared = dx * dx + dy * dy
 
           // Use squared distance comparison to avoid sqrt when possible
-          if (distanceSquared < 14400) { // 120 * 120
+          if (distanceSquared < 14400) {
+            // 120 * 120
             const distance = Math.sqrt(distanceSquared)
             const opacity = (1 - distance / 120) * 0.15
             ctx.beginPath()
