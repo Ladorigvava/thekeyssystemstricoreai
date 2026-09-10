@@ -14,6 +14,7 @@ Run `npm ci && npm run verify` to reproduce the automated checks. Provider respo
 
 ## Not yet verified in the live environment
 
+- GitHub Actions did not execute the verification job: [run 34494496338](https://github.com/Ladorigvava/thekeyssystemstricoreai/actions/runs/34494496338) reports that the account is locked due to a billing issue. No job steps or logs were produced. The local results above passed independently; remote CI remains blocked until the account issue is resolved.
 - Real OpenAI, Anthropic and Gemini credentials were unavailable. No live AI request was made with an exposed or replacement credential.
 - The controlled browser could not reach the local development host (`ERR_BLOCKED_BY_CLIENT`). DOM workflow coverage passed, but visual browser and mobile acceptance checks remain outstanding.
 - The actual application host, domain and deployment configuration were not identified. The Docker configuration was prepared but not built or deployed here. Local backend persistence was tested; production disk durability and HTTPS remain deployment checks.
