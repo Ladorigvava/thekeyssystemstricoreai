@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS: KnowledgeSettings = {
   enableWolframAlpha: false,
   enableArxiv: false,
   enablePubMed: false,
-  autoEnhance: false
+  autoEnhance: false,
 }
 
 const KNOWLEDGE_SETTINGS_KEY = 'knowledge-database-settings'
@@ -42,7 +42,9 @@ export function saveKnowledgeSettings(settings: KnowledgeSettings) {
 }
 
 export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
-  const [settings, setSettings] = useState<KnowledgeSettings>(getKnowledgeSettings())
+  const [settings, setSettings] = useState<KnowledgeSettings>(
+    getKnowledgeSettings(),
+  )
 
   const handleSave = () => {
     saveKnowledgeSettings(settings)
@@ -50,7 +52,7 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
   }
 
   const updateSetting = (key: keyof KnowledgeSettings, value: boolean) => {
-    setSettings(prev => ({ ...prev, [key]: value }))
+    setSettings((prev) => ({ ...prev, [key]: value }))
   }
 
   return (
@@ -60,16 +62,23 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <Database size={24} weight="duotone" className="text-primary" />
-              <h1 className="text-2xl font-bold font-display">Knowledge Databases</h1>
+              <h1 className="text-2xl font-bold font-display">
+                Knowledge Databases
+              </h1>
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleSave} size="sm">Save Settings</Button>
-              <Button onClick={onClose} variant="outline" size="sm">Cancel</Button>
+              <Button onClick={handleSave} size="sm">
+                Save Settings
+              </Button>
+              <Button onClick={onClose} variant="outline" size="sm">
+                Cancel
+              </Button>
             </div>
           </div>
 
           <p className="text-sm text-muted-foreground mb-6">
-            Connect AI responses to worldwide knowledge sources for enhanced accuracy and real-time information.
+            Connect AI responses to worldwide knowledge sources for enhanced
+            accuracy and real-time information.
           </p>
 
           {/* Auto-Enhancement Toggle */}
@@ -86,14 +95,18 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
               </div>
               <Switch
                 checked={settings.autoEnhance}
-                onCheckedChange={(checked) => updateSetting('autoEnhance', checked)}
+                onCheckedChange={(checked) =>
+                  updateSetting('autoEnhance', checked)
+                }
               />
             </div>
           </ConsoleCard>
 
           {/* Knowledge Sources */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-muted-foreground">AVAILABLE SOURCES</h3>
+            <h3 className="text-sm font-semibold text-muted-foreground">
+              AVAILABLE SOURCES
+            </h3>
 
             {/* Wikipedia */}
             <ConsoleCard glass className="p-4">
@@ -103,7 +116,9 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">Wikipedia</p>
-                      <Badge variant="outline" className="text-xs">Free</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Free
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       General knowledge encyclopedia - Facts, history, science
@@ -112,7 +127,9 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
                 </div>
                 <Switch
                   checked={settings.enableWikipedia}
-                  onCheckedChange={(checked) => updateSetting('enableWikipedia', checked)}
+                  onCheckedChange={(checked) =>
+                    updateSetting('enableWikipedia', checked)
+                  }
                 />
               </div>
             </ConsoleCard>
@@ -125,7 +142,9 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">Web Search (Serper)</p>
-                      <Badge variant="outline" className="text-xs">API Key Required</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        API Key Required
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Real-time Google search results - Current events, news
@@ -134,7 +153,9 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
                 </div>
                 <Switch
                   checked={settings.enableWebSearch}
-                  onCheckedChange={(checked) => updateSetting('enableWebSearch', checked)}
+                  onCheckedChange={(checked) =>
+                    updateSetting('enableWebSearch', checked)
+                  }
                 />
               </div>
             </ConsoleCard>
@@ -147,7 +168,9 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">Wolfram Alpha</p>
-                      <Badge variant="outline" className="text-xs">API Key Required</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        API Key Required
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Computational knowledge - Math, science calculations
@@ -156,7 +179,9 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
                 </div>
                 <Switch
                   checked={settings.enableWolframAlpha}
-                  onCheckedChange={(checked) => updateSetting('enableWolframAlpha', checked)}
+                  onCheckedChange={(checked) =>
+                    updateSetting('enableWolframAlpha', checked)
+                  }
                 />
               </div>
             </ConsoleCard>
@@ -169,7 +194,9 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">arXiv</p>
-                      <Badge variant="outline" className="text-xs">Free</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Free
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Scientific papers - Physics, math, computer science
@@ -178,7 +205,9 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
                 </div>
                 <Switch
                   checked={settings.enableArxiv}
-                  onCheckedChange={(checked) => updateSetting('enableArxiv', checked)}
+                  onCheckedChange={(checked) =>
+                    updateSetting('enableArxiv', checked)
+                  }
                 />
               </div>
             </ConsoleCard>
@@ -191,7 +220,9 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">PubMed</p>
-                      <Badge variant="outline" className="text-xs">Free</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Free
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Medical literature - Health, medicine, biomedical
@@ -200,7 +231,9 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
                 </div>
                 <Switch
                   checked={settings.enablePubMed}
-                  onCheckedChange={(checked) => updateSetting('enablePubMed', checked)}
+                  onCheckedChange={(checked) =>
+                    updateSetting('enablePubMed', checked)
+                  }
                 />
               </div>
             </ConsoleCard>
@@ -210,19 +243,38 @@ export function KnowledgeDatabasePanel({ onClose }: { onClose: () => void }) {
           <ConsoleCard glass className="p-4 mt-6">
             <h3 className="text-sm font-semibold mb-3">📝 API Key Setup</h3>
             <p className="text-xs text-muted-foreground mb-2">
-              Add these to your <code className="bg-background/50 px-1 py-0.5 rounded">.env</code> file:
+              Add these to your{' '}
+              <code className="bg-background/50 px-1 py-0.5 rounded">.env</code>{' '}
+              file:
             </p>
             <pre className="text-xs bg-background/50 p-3 rounded overflow-x-auto">
-{`# Knowledge Database APIs
-VITE_SERPER_API_KEY=your-serper-key
-VITE_WOLFRAM_ALPHA_API_KEY=your-wolfram-key`}
+              {`# Knowledge Database APIs
+SERPER_API_KEY=your-serper-key
+WOLFRAM_ALPHA_API_KEY=your-wolfram-key`}
             </pre>
             <div className="mt-3 space-y-1 text-xs">
               <p className="text-muted-foreground">
-                • <strong>Serper:</strong> <a href="https://serper.dev" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">serper.dev</a> (Google Search API)
+                • <strong>Serper:</strong>{' '}
+                <a
+                  href="https://serper.dev"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  serper.dev
+                </a>{' '}
+                (Google Search API)
               </p>
               <p className="text-muted-foreground">
-                • <strong>Wolfram Alpha:</strong> <a href="https://products.wolframalpha.com/api" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">products.wolframalpha.com/api</a>
+                • <strong>Wolfram Alpha:</strong>{' '}
+                <a
+                  href="https://products.wolframalpha.com/api"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  products.wolframalpha.com/api
+                </a>
               </p>
             </div>
           </ConsoleCard>

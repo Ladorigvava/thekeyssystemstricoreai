@@ -10,6 +10,8 @@
     ],
     "module": "ESNext",
     "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
     "strictNullChecks": true,
     /* Bundler mode */
     "moduleResolution": "bundler",

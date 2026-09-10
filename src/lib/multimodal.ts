@@ -4,14 +4,15 @@
  */
 
 import { AIEngine } from './engines'
-import { callLLM } from './llm'
+import { callLLM, type LLMOptions } from './llm'
 import { ModelParameters } from './model-parameters'
 
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
 
-export type MediaModality = 'audio' | 'video' | 'image' | 'text-to-speech' | 'music' | '3d' | 'multimodal'
+export type MediaModality =
+  'audio' | 'video' | 'image' | 'text-to-speech' | 'music' | '3d' | 'multimodal'
 
 export interface AudioGenerationParams {
   type: 'voiceover' | 'music' | 'soundscape' | 'sfx' | 'speech'
@@ -68,9 +69,8 @@ export async function generateQuantumAudioBrief(
   description: string,
   params: AudioGenerationParams,
   engine: AIEngine,
-  customParams?: Partial<ModelParameters>
+  customParams?: LLMOptions,
 ): Promise<MultimodalOutput> {
-  
   const enhancedPrompt = `You are a quantum-level AI audio production specialist with deep knowledge of:
 - Neural audio synthesis (Suno, Udio, MusicGen, AudioCraft)
 - Advanced TTS systems (ElevenLabs, Play.ht, Murf, VEED)
@@ -140,18 +140,20 @@ Realistic production timeline and approximate cost for AI generation tools.
 Be quantum-level precise. Think like a Grammy-winning audio engineer with access to cutting-edge AI.`
 
   const brief = await callLLM(enhancedPrompt, engine, customParams)
-  
+
   // Extract AI-ready prompt (content between backticks)
   const promptMatch = brief.match(/```([^`]+)```/)
-  const aiToolPrompt = promptMatch ? promptMatch[1].trim() : extractFirstSection(brief)
-  
+  const aiToolPrompt = promptMatch
+    ? promptMatch[1].trim()
+    : extractFirstSection(brief)
+
   // Extract production notes
   const productionNotes = extractBulletPoints(brief, 'PRODUCTION NOTES')
-  
+
   // Extract recommended tools
   const toolsSection = extractSection(brief, 'RECOMMENDED TOOLS')
   const recommendedTools = extractBulletPoints(toolsSection)
-  
+
   return {
     modality: 'audio',
     brief,
@@ -160,7 +162,7 @@ Be quantum-level precise. Think like a Grammy-winning audio engineer with access
     productionNotes,
     recommendedTools,
     timeline: extractTimeline(brief),
-    estimatedCost: extractCost(brief)
+    estimatedCost: extractCost(brief),
   }
 }
 
@@ -172,9 +174,8 @@ export async function generateQuantumVideoBrief(
   description: string,
   params: VideoGenerationParams,
   engine: AIEngine,
-  customParams?: Partial<ModelParameters>
+  customParams?: LLMOptions,
 ): Promise<MultimodalOutput> {
-  
   const enhancedPrompt = `You are a quantum-level AI video production specialist with mastery of:
 - Text-to-video AI (Runway Gen-3, Pika, Sora, Stable Video Diffusion)
 - AI cinematography & composition
@@ -251,11 +252,13 @@ Breakdown of AI tool costs and total project estimate.
 Be quantum-level cinematic. Think like Christopher Nolan meeting the future of AI filmmaking.`
 
   const brief = await callLLM(enhancedPrompt, engine, customParams)
-  
+
   const aiToolPrompt = extractCodeBlocks(brief)[0] || extractFirstSection(brief)
   const productionNotes = extractBulletPoints(brief, 'POST-PRODUCTION')
-  const recommendedTools = extractBulletPoints(extractSection(brief, 'RECOMMENDED'))
-  
+  const recommendedTools = extractBulletPoints(
+    extractSection(brief, 'RECOMMENDED'),
+  )
+
   return {
     modality: 'video',
     brief,
@@ -264,7 +267,7 @@ Be quantum-level cinematic. Think like Christopher Nolan meeting the future of A
     productionNotes,
     recommendedTools,
     timeline: extractTimeline(brief),
-    estimatedCost: extractCost(brief)
+    estimatedCost: extractCost(brief),
   }
 }
 
@@ -276,9 +279,8 @@ export async function generateQuantumImageBrief(
   description: string,
   params: ImageGenerationParams,
   engine: AIEngine,
-  customParams?: Partial<ModelParameters>
+  customParams?: LLMOptions,
 ): Promise<MultimodalOutput> {
-  
   const enhancedPrompt = `You are a quantum-level AI image generation specialist with expertise in:
 - DALL-E 3, Midjourney, Stable Diffusion XL, Flux
 - Photographic composition & lighting theory
@@ -351,12 +353,14 @@ How to generate multiple versions with controlled variation.
 Be quantum-level artistic. Channel the precision of Ansel Adams with AI's infinite possibilities.`
 
   const brief = await callLLM(enhancedPrompt, engine, customParams)
-  
+
   const codeBlocks = extractCodeBlocks(brief)
   const aiToolPrompt = codeBlocks[0] || extractFirstSection(brief)
   const productionNotes = extractBulletPoints(brief, 'POST-PROCESSING')
-  const recommendedTools = extractBulletPoints(extractSection(brief, 'RECOMMENDED TOOLS'))
-  
+  const recommendedTools = extractBulletPoints(
+    extractSection(brief, 'RECOMMENDED TOOLS'),
+  )
+
   return {
     modality: 'image',
     brief,
@@ -364,7 +368,7 @@ Be quantum-level artistic. Channel the precision of Ansel Adams with AI's infini
     aiToolPrompt,
     productionNotes,
     recommendedTools,
-    estimatedCost: extractCost(brief)
+    estimatedCost: extractCost(brief),
   }
 }
 
@@ -376,9 +380,8 @@ export async function generateCrossModalBrief(
   description: string,
   modalities: MediaModality[],
   engine: AIEngine,
-  customParams?: Partial<ModelParameters>
+  customParams?: LLMOptions,
 ): Promise<MultimodalOutput> {
-  
   const enhancedPrompt = `You are a quantum-level multimodal AI orchestrator specializing in cross-modal synthesis.
 
 USER REQUEST: ${description}
@@ -386,32 +389,44 @@ USER REQUEST: ${description}
 REQUIRED MODALITIES: ${modalities.join(', ')}
 
 Create a unified production brief that seamlessly integrates:
-${modalities.map(m => `- ${m.toUpperCase()}`).join('\n')}
+${modalities.map((m) => `- ${m.toUpperCase()}`).join('\n')}
 
 ## 1. UNIFIED CREATIVE VISION
 How all modalities work together to create a cohesive experience.
 
 ## 2. MODAL BREAKDOWN
 
-${modalities.includes('video') ? `### VIDEO COMPONENT
+${
+  modalities.includes('video')
+    ? `### VIDEO COMPONENT
 - Visual narrative structure
 - Scene list with timings
 - AI tool prompts for each scene
 - Technical specifications
-` : ''}
+`
+    : ''
+}
 
-${modalities.includes('audio') || modalities.includes('music') ? `### AUDIO COMPONENT
+${
+  modalities.includes('audio') || modalities.includes('music')
+    ? `### AUDIO COMPONENT
 - Soundtrack/voiceover strategy
 - Audio arc & synchronization points
 - AI tool prompts for audio generation
 - Mixing guidelines
-` : ''}
+`
+    : ''
+}
 
-${modalities.includes('image') ? `### IMAGE COMPONENT
+${
+  modalities.includes('image')
+    ? `### IMAGE COMPONENT
 - Key frames & thumbnails
 - Style consistency across images
 - AI tool prompts for image generation
-` : ''}
+`
+    : ''
+}
 
 ## 3. SYNCHRONIZATION STRATEGY
 - Timeline coordination between modalities
@@ -435,14 +450,14 @@ Final output formats and rendering settings.
 Be quantum-level holistic. Orchestrate like Hans Zimmer scoring a Nolan film while directing the visuals.`
 
   const brief = await callLLM(enhancedPrompt, engine, customParams)
-  
+
   return {
     modality: 'multimodal',
     brief,
     technicalSpecs: { modalities },
     aiToolPrompt: extractFirstSection(brief),
     productionNotes: extractBulletPoints(brief, 'QUALITY'),
-    recommendedTools: extractBulletPoints(extractSection(brief, 'AI TOOLS'))
+    recommendedTools: extractBulletPoints(extractSection(brief, 'AI TOOLS')),
   }
 }
 
@@ -454,16 +469,19 @@ function extractCodeBlocks(text: string): string[] {
   const blocks: string[] = []
   const regex = /```(?:\w+)?\n([\s\S]*?)```/g
   let match
-  
+
   while ((match = regex.exec(text)) !== null) {
     blocks.push(match[1].trim())
   }
-  
+
   return blocks
 }
 
 function extractSection(text: string, header: string): string {
-  const regex = new RegExp(`##\\s*\\d*\\.?\\s*${header}[^#]*([\\s\\S]*?)(?=##|$)`, 'i')
+  const regex = new RegExp(
+    `##\\s*\\d*\\.?\\s*${header}[^#]*([\\s\\S]*?)(?=##|$)`,
+    'i',
+  )
   const match = text.match(regex)
   return match ? match[1].trim() : ''
 }
@@ -472,14 +490,18 @@ function extractBulletPoints(text: string, section?: string): string[] {
   const content = section ? extractSection(text, section) : text
   const points: string[] = []
   const lines = content.split('\n')
-  
+
   for (const line of lines) {
     const trimmed = line.trim()
-    if (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('*')) {
+    if (
+      trimmed.startsWith('-') ||
+      trimmed.startsWith('•') ||
+      trimmed.startsWith('*')
+    ) {
       points.push(trimmed.substring(1).trim())
     }
   }
-  
+
   return points
 }
 
@@ -489,15 +511,17 @@ function extractFirstSection(text: string): string {
 }
 
 function extractTimeline(text: string): string | undefined {
-  const match = text.match(/timeline:?\s*([^\n]+)/i) || 
-                text.match(/total:?\s*([^\n]+)/i) ||
-                text.match(/(\d+\s*(?:days?|weeks?|hours?|minutes?))/i)
+  const match =
+    text.match(/timeline:?\s*([^\n]+)/i) ||
+    text.match(/total:?\s*([^\n]+)/i) ||
+    text.match(/(\d+\s*(?:days?|weeks?|hours?|minutes?))/i)
   return match ? match[1].trim() : undefined
 }
 
 function extractCost(text: string): string | undefined {
-  const match = text.match(/(?:cost|budget|estimate):?\s*\$?([^\n]+)/i) ||
-                text.match(/\$(\d+(?:\.\d{2})?(?:\s*-\s*\$?\d+(?:\.\d{2})?)?)/i)
+  const match =
+    text.match(/(?:cost|budget|estimate):?\s*\$?([^\n]+)/i) ||
+    text.match(/\$(\d+(?:\.\d{2})?(?:\s*-\s*\$?\d+(?:\.\d{2})?)?)/i)
   return match ? match[1].trim() : undefined
 }
 
@@ -507,22 +531,35 @@ function extractCost(text: string): string | undefined {
 
 export async function optimizePromptForTool(
   basePrompt: string,
-  tool: 'suno' | 'udio' | 'elevenlabs' | 'runway' | 'pika' | 'midjourney' | 'dalle' | 'stable-diffusion' | 'flux',
-  engine: AIEngine
+  tool:
+    | 'suno'
+    | 'udio'
+    | 'elevenlabs'
+    | 'runway'
+    | 'pika'
+    | 'midjourney'
+    | 'dalle'
+    | 'stable-diffusion'
+    | 'flux',
+  engine: AIEngine,
 ): Promise<string> {
-  
   const toolSpecs: Record<string, string> = {
-    'suno': 'Suno AI music generator - loves genre tags, mood descriptors, style references, instrumental details',
-    'udio': 'Udio music AI - prefers natural language, emotional descriptions, musical elements breakdown',
-    'elevenlabs': 'ElevenLabs TTS - needs clear pronunciation, emotional cues in [brackets], pacing marks',
-    'runway': 'Runway Gen-3 - best with camera movements, lighting descriptions, subject actions, cinematic terms',
-    'pika': 'Pika Labs - excels with motion descriptions, subject focus, simple scene composition',
-    'midjourney': 'Midjourney v6 - structured prompts, artistic styles, photographer references, --parameters',
-    'dalle': 'DALL-E 3 - natural language, detailed descriptions, creative freedom',
-    'stable-diffusion': 'Stable Diffusion XL - technical prompts, quality tags, negative prompts crucial',
-    'flux': 'Flux Pro - photorealistic scenes, cinematic lighting, technical camera settings'
+    suno: 'Suno AI music generator - loves genre tags, mood descriptors, style references, instrumental details',
+    udio: 'Udio music AI - prefers natural language, emotional descriptions, musical elements breakdown',
+    elevenlabs:
+      'ElevenLabs TTS - needs clear pronunciation, emotional cues in [brackets], pacing marks',
+    runway:
+      'Runway Gen-3 - best with camera movements, lighting descriptions, subject actions, cinematic terms',
+    pika: 'Pika Labs - excels with motion descriptions, subject focus, simple scene composition',
+    midjourney:
+      'Midjourney v6 - structured prompts, artistic styles, photographer references, --parameters',
+    dalle:
+      'DALL-E 3 - natural language, detailed descriptions, creative freedom',
+    'stable-diffusion':
+      'Stable Diffusion XL - technical prompts, quality tags, negative prompts crucial',
+    flux: 'Flux Pro - photorealistic scenes, cinematic lighting, technical camera settings',
   }
-  
+
   const optimizationPrompt = `You are a prompt engineering specialist for ${tool}.
 
 TOOL CHARACTERISTICS: ${toolSpecs[tool]}
@@ -541,17 +578,22 @@ Output the final optimized prompt ready to copy-paste into ${tool}.`
 
 function getToolSpecificTechniques(tool: string): string {
   const techniques: Record<string, string> = {
-    'suno': '- Add [Genre] tags\n- Include tempo/BPM\n- Specify instruments\n- Add mood/vibe descriptors',
-    'udio': '- Use natural language\n- Describe emotional journey\n- Reference artists/songs\n- Detail musical elements',
-    'elevenlabs': '- Mark pauses with [...]\n- Add [emotional] cues\n- Specify emphasis\n- Include pronunciation guides',
-    'runway': '- Start with camera movement\n- Describe lighting (golden hour, harsh shadows)\n- Detail subject actions\n- Add cinematic style',
-    'pika': '- Focus on main subject\n- Simple motion description\n- Clear scene composition\n- Avoid complex multi-element scenes',
-    'midjourney': '- Use artist/photographer style references\n- Add technical parameters (--ar, --style, --v 6)\n- Weight important elements\n- Structure: Subject, Style, Medium, Details',
-    'dalle': '- Rich, natural language\n- Detailed scene description\n- Specify perspective\n- Include mood/atmosphere',
-    'stable-diffusion': '- Front-load quality tags (masterpiece, highly detailed)\n- Separate positive and negative\n- Use technical terms (8k, photorealistic)\n- Include style modifiers',
-    'flux': '- Photographic detail (f/1.4, 35mm, ISO 100)\n- Lighting setup (soft box, rim light)\n- Subject positioning\n- Professional camera terminology'
+    suno: '- Add [Genre] tags\n- Include tempo/BPM\n- Specify instruments\n- Add mood/vibe descriptors',
+    udio: '- Use natural language\n- Describe emotional journey\n- Reference artists/songs\n- Detail musical elements',
+    elevenlabs:
+      '- Mark pauses with [...]\n- Add [emotional] cues\n- Specify emphasis\n- Include pronunciation guides',
+    runway:
+      '- Start with camera movement\n- Describe lighting (golden hour, harsh shadows)\n- Detail subject actions\n- Add cinematic style',
+    pika: '- Focus on main subject\n- Simple motion description\n- Clear scene composition\n- Avoid complex multi-element scenes',
+    midjourney:
+      '- Use artist/photographer style references\n- Add technical parameters (--ar, --style, --v 6)\n- Weight important elements\n- Structure: Subject, Style, Medium, Details',
+    dalle:
+      '- Rich, natural language\n- Detailed scene description\n- Specify perspective\n- Include mood/atmosphere',
+    'stable-diffusion':
+      '- Front-load quality tags (masterpiece, highly detailed)\n- Separate positive and negative\n- Use technical terms (8k, photorealistic)\n- Include style modifiers',
+    flux: '- Photographic detail (f/1.4, 35mm, ISO 100)\n- Lighting setup (soft box, rim light)\n- Subject positioning\n- Professional camera terminology',
   }
-  
+
   return techniques[tool] || 'Use clear, detailed descriptions'
 }
 
@@ -565,14 +607,13 @@ export async function batchGenerateMultimodal(
     modality: MediaModality
     params?: any
   }>,
-  engine: AIEngine
+  engine: AIEngine,
 ): Promise<MultimodalOutput[]> {
-  
   const results: MultimodalOutput[] = []
-  
+
   for (const request of requests) {
     let output: MultimodalOutput
-    
+
     switch (request.modality) {
       case 'audio':
       case 'music':
@@ -580,36 +621,36 @@ export async function batchGenerateMultimodal(
         output = await generateQuantumAudioBrief(
           request.description,
           request.params || {},
-          engine
+          engine,
         )
         break
-      
+
       case 'video':
         output = await generateQuantumVideoBrief(
           request.description,
           request.params || {},
-          engine
+          engine,
         )
         break
-      
+
       case 'image':
         output = await generateQuantumImageBrief(
           request.description,
           request.params || {},
-          engine
+          engine,
         )
         break
-      
+
       default:
         output = await generateCrossModalBrief(
           request.description,
           [request.modality],
-          engine
+          engine,
         )
     }
-    
+
     results.push(output)
   }
-  
+
   return results
 }

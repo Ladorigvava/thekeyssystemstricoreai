@@ -3,10 +3,19 @@ import { ConsoleCard } from '@/components/ConsoleCard'
 import { SparkStatus } from '@/components/SparkStatus'
 import { CORE_CONFIGS } from '@/lib/cores'
 import { motion } from 'framer-motion'
-import { Atom, Shield, Sparkle, FlowArrow, VideoCamera, Waveform } from '@phosphor-icons/react'
+import {
+  Atom,
+  Shield,
+  Sparkle,
+  FlowArrow,
+  VideoCamera,
+  Waveform,
+} from '@phosphor-icons/react'
 
 interface LandingViewProps {
-  onSelectMode: (mode: 'chadrak' | 'nova' | 'triad' | 'tricore' | 'audio' | 'video') => void
+  onSelectMode: (
+    mode: 'chadrak' | 'nova' | 'triad' | 'tricore' | 'audio' | 'video',
+  ) => void
 }
 
 export function LandingView({ onSelectMode }: LandingViewProps) {
@@ -31,11 +40,10 @@ export function LandingView({ onSelectMode }: LandingViewProps) {
             </div>
           </div>
           <p className="text-sm text-muted-foreground max-w-3xl leading-relaxed ml-7">
-            Access your AI reasoning cores and media generation tools. Select a system below to begin.
+            Access your AI reasoning cores and media generation tools. Select a
+            system below to begin.
           </p>
         </motion.div>
-
-        <SparkStatus />
 
         <div className="space-y-6">
           <motion.div
@@ -87,7 +95,11 @@ export function LandingView({ onSelectMode }: LandingViewProps) {
             transition={{ duration: 0.5, delay: 0.25 }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <VideoCamera size={18} className="text-secondary" weight="duotone" />
+              <VideoCamera
+                size={18}
+                className="text-secondary"
+                weight="duotone"
+              />
               <h2 className="text-sm font-semibold uppercase tracking-wider">
                 Media Generation Studios
               </h2>
@@ -121,7 +133,8 @@ export function LandingView({ onSelectMode }: LandingViewProps) {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold mb-1 text-xs">System Status</h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    All AI cores operational. Multi-engine architecture active with support for GPT-4, Claude, and Gemini models.
+                    All AI cores operational. Multi-engine architecture active
+                    with support for GPT-4, Claude, and Gemini models.
                   </p>
                 </div>
               </div>

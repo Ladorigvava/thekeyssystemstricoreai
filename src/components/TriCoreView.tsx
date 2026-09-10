@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { OutputPanel } from '@/components/OutputPanel'
@@ -6,470 +6,371 @@ import { HistoryPanel } from '@/components/HistoryPanel'
 import { HistoryDetailModal } from '@/components/HistoryDetailModal'
 import { EngineSelect } from '@/components/EngineSelect'
 import { SystemPromptEditor } from '@/components/SystemPromptEditor'
-import { ConsoleCard } from '@/components/ConsoleCard'
 import { CORE_CONFIGS } from '@/lib/cores'
 import { HistoryEntry, createHistoryEntry } from '@/lib/history'
-import { AIEngine, DEFAULT_ENGINE, getEngineStorageKey } from '@/lib/engines'
+import {
+  AIEngine,
+  CORE_ENGINES,
+  ENGINE_CONFIGS,
+  getEngineStorageKey,
+} from '@/lib/engines'
 import { getCachedResponse, cacheResponse } from '@/lib/cache'
-import { callLLM, streamLLM } from '@/lib/llm'
-import { categorizeError } from '@/lib/retry'
+import { streamLLM, type LLMResult } from '@/lib/llm'
 import { logCost } from '@/lib/cost-tracking'
-import { ArrowLeft, Atom, Database } from '@phosphor-icons/react'
-import { motion } from 'framer-motion'
-import { useKV } from '@github/spark/hooks'
+import { useKV, flushStorage } from '@/lib/storage'
+import { exportEntryAsMarkdown, exportEntryAsJSON } from '@/lib/export'
 import { toast } from 'sonner'
+import { Atom, Square, Download } from 'lucide-react'
 
-interface TriCoreViewProps {
-  onBack: () => void
+type Core = 'chadrak' | 'nova' | 'triad'
+const CORES: Core[] = ['chadrak', 'nova', 'triad']
+type CoreState = {
+  content: string
+  status: 'idle' | 'running' | 'completed' | 'failed' | 'cancelled'
+  cached: boolean
+  error?: string
+  result?: LLMResult
 }
+const empty = (): Record<Core, CoreState> =>
+  Object.fromEntries(
+    CORES.map((id) => [id, { content: '', status: 'idle', cached: false }]),
+  ) as Record<Core, CoreState>
 
-interface CoreResults {
-  chadrak: string
-  nova: string
-  triad: string
-}
-
-interface CacheStatus {
-  chadrak: boolean
-  nova: boolean
-  triad: boolean
-}
-
-interface LoadingStatus {
-  chadrak: boolean
-  nova: boolean
-  triad: boolean
-}
-
-export function TriCoreView({ onBack }: TriCoreViewProps) {
+export function TriCoreView({ onBack: _onBack }: { onBack: () => void }) {
   const [input, setInput] = useKV('tricore-input', '')
-  const [results, setResults] = useState<CoreResults>({
-    chadrak: '',
-    nova: '',
-    triad: ''
-  })
-  const [cacheStatus, setCacheStatus] = useState<CacheStatus>({
-    chadrak: false,
-    nova: false,
-    triad: false
-  })
-  const [loadingStatus, setLoadingStatus] = useState<LoadingStatus>({
-    chadrak: false,
-    nova: false,
-    triad: false
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const [chadrakEngine, setChadrakEngine] = useKV<AIEngine>(getEngineStorageKey('chadrak'), DEFAULT_ENGINE)
-  const [novaEngine, setNovaEngine] = useKV<AIEngine>(getEngineStorageKey('nova'), DEFAULT_ENGINE)
-  const [triadEngine, setTriadEngine] = useKV<AIEngine>(getEngineStorageKey('triad'), DEFAULT_ENGINE)
-  const [chadrakPrompt, setChadrakPrompt] = useKV<string>('custom-prompt-chadrak', CORE_CONFIGS.chadrak.systemPrompt)
-  const [novaPrompt, setNovaPrompt] = useKV<string>('custom-prompt-nova', CORE_CONFIGS.nova.systemPrompt)
-  const [triadPrompt, setTriadPrompt] = useKV<string>('custom-prompt-triad', CORE_CONFIGS.triad.systemPrompt)
+  const [chadrak, setChadrak] = useKV<AIEngine>(
+    getEngineStorageKey('chadrak'),
+    CORE_ENGINES.chadrak,
+  )
+  const [nova, setNova] = useKV<AIEngine>(
+    getEngineStorageKey('nova'),
+    CORE_ENGINES.nova,
+  )
+  const [triad, setTriad] = useKV<AIEngine>(
+    getEngineStorageKey('triad'),
+    CORE_ENGINES.triad,
+  )
+  const engines = { chadrak, nova, triad },
+    setters = { chadrak: setChadrak, nova: setNova, triad: setTriad }
+  const [chadrakPrompt, setChadrakPrompt] = useKV(
+    'custom-prompt-chadrak',
+    CORE_CONFIGS.chadrak.systemPrompt,
+  )
+  const [novaPrompt, setNovaPrompt] = useKV(
+    'custom-prompt-nova',
+    CORE_CONFIGS.nova.systemPrompt,
+  )
+  const [triadPrompt, setTriadPrompt] = useKV(
+    'custom-prompt-triad',
+    CORE_CONFIGS.triad.systemPrompt,
+  )
+  const prompts = {
+    chadrak: chadrakPrompt,
+    nova: novaPrompt,
+    triad: triadPrompt,
+  }
+  const promptSetters = {
+    chadrak: setChadrakPrompt,
+    nova: setNovaPrompt,
+    triad: setTriadPrompt,
+  }
+  const [states, setStates] = useState(empty)
+  const [running, setRunning] = useState(false)
+  const [reuseCache, setReuseCache] = useState(false)
   const [history, setHistory] = useKV<HistoryEntry[]>('history-tricore', [])
-  const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null)
-  const [showHistoryDetail, setShowHistoryDetail] = useState(false)
-
-  const handleRunTriCore = async () => {
-    if (!input || !input.trim()) {
-      toast.error('Please enter some text to analyze')
-      return
-    }
-
-    setIsLoading(true)
-    setResults({ chadrak: '', nova: '', triad: '' })
-    setCacheStatus({ chadrak: false, nova: false, triad: false })
-    setLoadingStatus({ chadrak: true, nova: true, triad: true })
-
-    const chadrakSysPrompt = chadrakPrompt || CORE_CONFIGS.chadrak.systemPrompt
-    const novaSysPrompt = novaPrompt || CORE_CONFIGS.nova.systemPrompt
-    const triadSysPrompt = triadPrompt || CORE_CONFIGS.triad.systemPrompt
-
-    const chadrakPromptText = `${chadrakSysPrompt}
-
-User input:
-${input}`
-
-    const novaPromptText = `${novaSysPrompt}
-
-User input:
-${input}`
-
-    const triadPromptText = `${triadSysPrompt}
-
-User input:
-${input}`
-
-    // Process each core independently with parallel execution
-    const processChadrak = async () => {
-      try {
-        const cachedResult = await getCachedResponse(chadrakPromptText, chadrakEngine || DEFAULT_ENGINE, 'chadrak')
-        
-        if (cachedResult) {
-          setResults(prev => ({ ...prev, chadrak: cachedResult }))
-          setCacheStatus(prev => ({ ...prev, chadrak: true }))
-          setLoadingStatus(prev => ({ ...prev, chadrak: false }))
-          return cachedResult
-        } else {
-          const result = await streamLLM(
-            chadrakPromptText, 
-            chadrakEngine || DEFAULT_ENGINE,
-            (chunk) => {
-              setResults(prev => ({ ...prev, chadrak: chunk }))
+  const [entry, setEntry] = useState<HistoryEntry | null>(null)
+  const [latest, setLatest] = useState<HistoryEntry | null>(null)
+  const controller = useRef<AbortController | null>(null)
+  useEffect(() => () => controller.current?.abort(), [])
+  const update = (id: Core, value: Partial<CoreState>) =>
+    setStates((old) => ({ ...old, [id]: { ...old[id], ...value } }))
+  async function run() {
+    if (controller.current || !input.trim()) return
+    const abort = new AbortController()
+    controller.current = abort
+    const submitted = input.trim(),
+      chosen = { ...engines },
+      instructions = { ...prompts }
+    setRunning(true)
+    setStates(empty())
+    setLatest(null)
+    try {
+      const outcomes = await Promise.all(
+        CORES.map(async (id) => {
+          update(id, { status: 'running' })
+          const cacheKey = JSON.stringify({
+            instructions: instructions[id],
+            input: submitted,
+          })
+          try {
+            let result: LLMResult | undefined
+            const cached = reuseCache
+              ? await getCachedResponse(cacheKey, chosen[id], id)
+              : null
+            const content =
+              cached ||
+              (await streamLLM(
+                submitted,
+                chosen[id],
+                (text) => update(id, { content: text }),
+                {
+                  instructions: instructions[id],
+                  signal: abort.signal,
+                  onResult: (value) => {
+                    result = value
+                  },
+                },
+              ))
+            if (abort.signal.aborted) throw new Error('Cancelled')
+            update(id, {
+              content,
+              status: 'completed',
+              cached: Boolean(cached),
+              result,
+            })
+            if (!cached) {
+              logCost(chosen[id], submitted, content, id)
+              await cacheResponse(cacheKey, content, chosen[id], id)
             }
-          )
-          logCost(chadrakEngine || DEFAULT_ENGINE, chadrakPromptText, result, 'chadrak')
-          setLoadingStatus(prev => ({ ...prev, chadrak: false }))
-          await cacheResponse(chadrakPromptText, result, chadrakEngine || DEFAULT_ENGINE, 'chadrak')
-          return result
-        }
-      } catch (error) {
-        console.error('Chadrak error:', error)
-        const cachedFallback = await getCachedResponse(chadrakPromptText, chadrakEngine || DEFAULT_ENGINE, 'chadrak')
-        if (cachedFallback) {
-          setResults(prev => ({ ...prev, chadrak: cachedFallback }))
-          setCacheStatus(prev => ({ ...prev, chadrak: true }))
-        } else {
-          const errorInfo = categorizeError(error instanceof Error ? error : new Error(String(error)))
-          setResults(prev => ({ ...prev, chadrak: `⚠️ Analysis failed: ${errorInfo.message}` }))
-        }
-        setLoadingStatus(prev => ({ ...prev, chadrak: false }))
-        return cachedFallback || ''
-      }
-    }
-
-    const processNova = async () => {
-      try {
-        const cachedResult = await getCachedResponse(novaPromptText, novaEngine || DEFAULT_ENGINE, 'nova')
-        
-        if (cachedResult) {
-          setResults(prev => ({ ...prev, nova: cachedResult }))
-          setCacheStatus(prev => ({ ...prev, nova: true }))
-          setLoadingStatus(prev => ({ ...prev, nova: false }))
-          return cachedResult
-        } else {
-          const result = await streamLLM(
-            novaPromptText, 
-            novaEngine || DEFAULT_ENGINE,
-            (chunk) => {
-              setResults(prev => ({ ...prev, nova: chunk }))
+            return {
+              id,
+              content,
+              status: 'completed' as const,
+              cached: Boolean(cached),
+              result,
             }
-          )
-          logCost(novaEngine || DEFAULT_ENGINE, novaPromptText, result, 'nova')
-          setLoadingStatus(prev => ({ ...prev, nova: false }))
-          await cacheResponse(novaPromptText, result, novaEngine || DEFAULT_ENGINE, 'nova')
-          return result
-        }
-      } catch (error) {
-        console.error('Nova error:', error)
-        const cachedFallback = await getCachedResponse(novaPromptText, novaEngine || DEFAULT_ENGINE, 'nova')
-        if (cachedFallback) {
-          setResults(prev => ({ ...prev, nova: cachedFallback }))
-          setCacheStatus(prev => ({ ...prev, nova: true }))
-        } else {
-          const errorInfo = categorizeError(error instanceof Error ? error : new Error(String(error)))
-          setResults(prev => ({ ...prev, nova: `⚠️ Analysis failed: ${errorInfo.message}` }))
-        }
-        setLoadingStatus(prev => ({ ...prev, nova: false }))
-        return cachedFallback || ''
-      }
-    }
-
-    const processTriad = async () => {
-      try {
-        const cachedResult = await getCachedResponse(triadPromptText, triadEngine || DEFAULT_ENGINE, 'triad')
-        
-        if (cachedResult) {
-          setResults(prev => ({ ...prev, triad: cachedResult }))
-          setCacheStatus(prev => ({ ...prev, triad: true }))
-          setLoadingStatus(prev => ({ ...prev, triad: false }))
-          return cachedResult
-        } else {
-          const result = await streamLLM(
-            triadPromptText, 
-            triadEngine || DEFAULT_ENGINE,
-            (chunk) => {
-              setResults(prev => ({ ...prev, triad: chunk }))
+          } catch (error) {
+            const message = abort.signal.aborted
+              ? 'Cancelled by you.'
+              : error instanceof Error
+                ? error.message
+                : 'Analysis failed.'
+            update(id, {
+              status: abort.signal.aborted ? 'cancelled' : 'failed',
+              error: message,
+            })
+            return {
+              id,
+              content: '',
+              status: abort.signal.aborted
+                ? ('cancelled' as const)
+                : ('failed' as const),
+              error: message,
+              cached: false,
             }
-          )
-          logCost(triadEngine || DEFAULT_ENGINE, triadPromptText, result, 'triad')
-          setLoadingStatus(prev => ({ ...prev, triad: false }))
-          await cacheResponse(triadPromptText, result, triadEngine || DEFAULT_ENGINE, 'triad')
-          return result
-        }
-      } catch (error) {
-        console.error('Triad error:', error)
-        const cachedFallback = await getCachedResponse(triadPromptText, triadEngine || DEFAULT_ENGINE, 'triad')
-        if (cachedFallback) {
-          setResults(prev => ({ ...prev, triad: cachedFallback }))
-          setCacheStatus(prev => ({ ...prev, triad: true }))
-        } else {
-          const errorInfo = categorizeError(error instanceof Error ? error : new Error(String(error)))
-          setResults(prev => ({ ...prev, triad: `⚠️ Analysis failed: ${errorInfo.message}` }))
-        }
-        setLoadingStatus(prev => ({ ...prev, triad: false }))
-        return cachedFallback || ''
+          }
+        }),
+      )
+      const successes = outcomes.filter(
+        (value) => value.status === 'completed',
+      ).length
+      const output = Object.fromEntries(
+        outcomes.map((value) => [
+          value.id,
+          value.content ||
+            `${value.status === 'cancelled' ? 'Cancelled' : 'Failed'}: ${value.error}`,
+        ]),
+      ) as Record<Core, string>
+      const saved: HistoryEntry = {
+        ...createHistoryEntry('tricore', submitted, output),
+        engine: CORES.map((id) => `${id}: ${chosen[id]}`).join(' · '),
+        status:
+          successes === 3 ? 'completed' : successes ? 'partial' : 'failed',
+        coreRuns: Object.fromEntries(
+          outcomes.map((value) => [
+            value.id,
+            {
+              model: chosen[value.id],
+              status: value.status,
+              cached: value.cached,
+              responseId: value.result?.responseId,
+              runId: value.result?.runId,
+            },
+          ]),
+        ),
       }
+      setHistory((old) => [saved, ...(old || [])].slice(0, 200))
+      setLatest(saved)
+      await flushStorage()
+      if (successes === 3)
+        toast.success('All three analyses completed and saved.')
+      else
+        toast.warning(
+          `${successes} of 3 cores completed. Details are saved in history.`,
+        )
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Unable to save the run.',
+      )
+    } finally {
+      controller.current = null
+      setRunning(false)
     }
-
-    // Execute all three cores in parallel
-    const [chadrakResult, novaResult, triadResult] = await Promise.all([
-      processChadrak(),
-      processNova(),
-      processTriad()
-    ])
-
-    // Count cached responses for notification
-    const cachedCount = [
-      cacheStatus.chadrak,
-      cacheStatus.nova,
-      cacheStatus.triad
-    ].filter(Boolean).length
-
-    if (cachedCount > 0) {
-      toast.success(`${cachedCount} response${cachedCount > 1 ? 's' : ''} loaded from cache`, {
-        icon: <Database size={16} weight="bold" />
-      })
-    }
-
-    // Check for any errors in results
-    const hasErrors = [chadrakResult, novaResult, triadResult].some(r => r.startsWith('⚠️'))
-    if (hasErrors) {
-      toast.warning('Some cores completed with errors', {
-        description: 'Check outputs for details. Retry logic was applied automatically.',
-        duration: 6000
-      })
-    }
-
-    // Save to history with all results
-    const finalResults = {
-      chadrak: chadrakResult,
-      nova: novaResult,
-      triad: triadResult
-    }
-
-    const newEntry = createHistoryEntry('tricore', input, finalResults)
-    setHistory((currentHistory) => [newEntry, ...(currentHistory || [])])
-
-    setIsLoading(false)
   }
-
-  const handleSelectHistoryEntry = (entry: HistoryEntry) => {
-    setSelectedEntry(entry)
-    setShowHistoryDetail(true)
-  }
-
-  const handleDeleteHistoryEntry = (id: string) => {
-    setHistory((currentHistory) => (currentHistory || []).filter((entry) => entry.id !== id))
-    toast.success('History entry deleted')
-  }
-
-  const handleClearHistory = () => {
-    setHistory([])
-    toast.success('History cleared')
-  }
-
+  const completed = CORES.filter(
+    (id) => states[id].status === 'completed',
+  ).length
   return (
-    <div className="min-h-screen w-full overflow-x-hidden">
-      <div className="border-b border-border/30 console-gradient">
-        <div className="max-w-[1400px] mx-auto px-4 py-4 md:px-8">
-          <div className="flex items-center gap-3">
-            <div className="w-1 h-8 bg-gradient-to-b from-primary to-transparent rounded-full" />
-            <div>
-              <div className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-0.5">
-                Combined Core System
-              </div>
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight">Tri-Core Analysis Engine</h1>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-[1400px] mx-auto px-4 py-6 md:px-8 md:py-8 w-full">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="mb-6"
-        >
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Execute parallel analysis across all three reasoning cores simultaneously
+    <main className="tri-workspace">
+      <header className="tri-heading">
+        <div>
+          <p className="tri-eyebrow">Combined core system</p>
+          <h1>Tri-Core Analysis Engine</h1>
+          <p className="text-muted-foreground">
+            One input. Three independent perspectives.
           </p>
-        </motion.div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-          <div className="xl:col-span-4 space-y-6">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-            >
-              <ConsoleCard glass className="p-4" glow="primary">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                    <label htmlFor="tricore-input" className="block text-xs font-semibold uppercase tracking-wider text-primary">
-                      Command Input Console
-                    </label>
-                  </div>
-                  <Textarea
-                    id="tricore-input"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Enter your text, idea, or document for multi-core analysis..."
-                    className="min-h-24 resize-none bg-background/50 border-border/50 focus:border-primary/50 text-sm leading-relaxed"
-                  />
-                  <Button
-                    onClick={handleRunTriCore}
-                    disabled={isLoading || !input || !input.trim()}
-                    className="w-full md:w-auto glow-primary"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Atom className="mr-2 animate-spin" size={18} weight="duotone" />
-                        Processing All Cores...
-                      </>
-                    ) : (
-                      <>
-                        <Atom className="mr-2" size={18} weight="duotone" />
-                        Run Tri-Core Analysis
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </ConsoleCard>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className="grid grid-cols-1 lg:grid-cols-3 gap-4"
-            >
-              <div className="space-y-3 min-w-0">
-                <ConsoleCard className="p-4 border-[var(--chadrak-accent)]/30" glow="chadrak">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--chadrak-accent)' }} />
-                      <span className="text-xs font-semibold uppercase tracking-wider truncate" style={{ color: 'var(--chadrak-accent)' }}>
-                        Chadrak
-                      </span>
-                    </div>
-                    <SystemPromptEditor
-                      coreId="chadrak"
-                      coreName="Chadrak Core"
-                      currentPrompt={chadrakPrompt || CORE_CONFIGS.chadrak.systemPrompt}
-                      defaultPrompt={CORE_CONFIGS.chadrak.systemPrompt}
-                      onSave={setChadrakPrompt}
-                      onReset={() => setChadrakPrompt(CORE_CONFIGS.chadrak.systemPrompt)}
-                    />
-                  </div>
-                  <EngineSelect 
-                    value={chadrakEngine || DEFAULT_ENGINE}
-                    onValueChange={setChadrakEngine}
-                  />
-                </ConsoleCard>
-                <div className="h-[450px]">
-                  <OutputPanel
-                    title="Structural Analysis"
-                    content={results.chadrak}
-                    isLoading={loadingStatus.chadrak}
-                    badge="Chadrak"
-                    usedCache={cacheStatus.chadrak}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-3 min-w-0">
-                <ConsoleCard className="p-4 border-[var(--nova-accent)]/30" glow="nova">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--nova-accent)' }} />
-                      <span className="text-xs font-semibold uppercase tracking-wider truncate" style={{ color: 'var(--nova-accent)' }}>
-                        Nova
-                      </span>
-                    </div>
-                    <SystemPromptEditor
-                      coreId="nova"
-                      coreName="Nova Core"
-                      currentPrompt={novaPrompt || CORE_CONFIGS.nova.systemPrompt}
-                      defaultPrompt={CORE_CONFIGS.nova.systemPrompt}
-                      onSave={setNovaPrompt}
-                      onReset={() => setNovaPrompt(CORE_CONFIGS.nova.systemPrompt)}
-                    />
-                  </div>
-                  <EngineSelect 
-                    value={novaEngine || DEFAULT_ENGINE}
-                    onValueChange={setNovaEngine}
-                  />
-                </ConsoleCard>
-                <div className="h-[450px]">
-                  <OutputPanel
-                    title="Narrative Enhancement"
-                    content={results.nova}
-                    isLoading={loadingStatus.nova}
-                    badge="Nova"
-                    usedCache={cacheStatus.nova}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-3 min-w-0">
-                <ConsoleCard className="p-4 border-[var(--triad-accent)]/30" glow="triad">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--triad-accent)' }} />
-                      <span className="text-xs font-semibold uppercase tracking-wider truncate" style={{ color: 'var(--triad-accent)' }}>
-                        Triad
-                      </span>
-                    </div>
-                    <SystemPromptEditor
-                      coreId="triad"
-                      coreName="Triad Core"
-                      currentPrompt={triadPrompt || CORE_CONFIGS.triad.systemPrompt}
-                      defaultPrompt={CORE_CONFIGS.triad.systemPrompt}
-                      onSave={setTriadPrompt}
-                      onReset={() => setTriadPrompt(CORE_CONFIGS.triad.systemPrompt)}
-                    />
-                  </div>
-                  <EngineSelect 
-                    value={triadEngine || DEFAULT_ENGINE}
-                    onValueChange={setTriadEngine}
-                  />
-                </ConsoleCard>
-                <div className="h-[450px]">
-                  <OutputPanel
-                    title="Execution Plan"
-                    content={results.triad}
-                    isLoading={loadingStatus.triad}
-                    badge="Triad"
-                    usedCache={cacheStatus.triad}
-                  />
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: 0.3 }}
-            className="h-[550px]"
-          >
-            <HistoryPanel
-              history={history || []}
-              onSelectEntry={handleSelectHistoryEntry}
-              onDeleteEntry={handleDeleteHistoryEntry}
-              onClearAll={handleClearHistory}
-            />
-          </motion.div>
         </div>
+        <span className="tri-run-count">
+          {running ? `${completed}/3 complete` : 'Chadrak · Nova · Triad'}
+        </span>
+      </header>
+      <div className="tri-layout">
+        <div className="min-w-0 space-y-5">
+          <section className="tri-console">
+            <label htmlFor="tricore-input" className="tri-eyebrow text-primary">
+              Command input
+            </label>
+            <Textarea
+              id="tricore-input"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              disabled={running}
+              maxLength={100000}
+              placeholder="Describe a goal, problem, or idea for the three cores…"
+              className="min-h-32 mt-3 text-base resize-y"
+            />
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={run} disabled={running || !input.trim()}>
+                  <Atom size={18} />
+                  {running ? 'Analysis in progress…' : 'Run Tri-Core Analysis'}
+                </Button>
+                {running && (
+                  <Button
+                    variant="outline"
+                    onClick={() => controller.current?.abort()}
+                  >
+                    <Square size={15} />
+                    Cancel
+                  </Button>
+                )}
+              </div>
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={reuseCache}
+                  onChange={(e) => setReuseCache(e.target.checked)}
+                  disabled={running}
+                />
+                Reuse exact cached answers
+              </label>
+            </div>
+          </section>
+          <div className="tri-core-grid">
+            {CORES.map((id) => (
+              <section
+                key={id}
+                className={`tri-core tri-core-${id}`}
+                aria-label={`${CORE_CONFIGS[id].name} panel`}
+              >
+                <div className="tri-core-settings">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <h2>{CORE_CONFIGS[id].name}</h2>
+                    <SystemPromptEditor
+                      coreId={id}
+                      coreName={CORE_CONFIGS[id].name}
+                      currentPrompt={prompts[id]}
+                      defaultPrompt={CORE_CONFIGS[id].systemPrompt}
+                      onSave={promptSetters[id]}
+                      onReset={() =>
+                        promptSetters[id](CORE_CONFIGS[id].systemPrompt)
+                      }
+                    />
+                  </div>
+                  <EngineSelect
+                    value={engines[id]}
+                    onValueChange={setters[id]}
+                    disabled={running}
+                  />
+                  <p className="text-sm text-muted-foreground mt-3">
+                    {id === 'chadrak'
+                      ? 'Structure · logic · risks'
+                      : id === 'nova'
+                        ? 'Critique · narrative · clarity'
+                        : 'Execution · dependencies · next steps'}
+                  </p>
+                </div>
+                <div className="tri-core-output">
+                  <OutputPanel
+                    title={
+                      states[id].status === 'idle'
+                        ? 'Ready for input'
+                        : states[id].status
+                    }
+                    content={states[id].content}
+                    isLoading={states[id].status === 'running'}
+                    usedCache={states[id].cached}
+                  />
+                  {states[id].error && (
+                    <p
+                      role="alert"
+                      className="text-sm text-destructive p-4 border-t border-border"
+                    >
+                      {states[id].error}
+                    </p>
+                  )}
+                  {states[id].result && (
+                    <p className="tri-provenance">
+                      {states[id].result!.provider} · {states[id].result!.model}
+                      <br />
+                      Response:{' '}
+                      {states[id].result!.responseId ||
+                        'No provider ID returned'}
+                    </p>
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
+          {latest && (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() => exportEntryAsMarkdown(latest)}
+              >
+                <Download size={16} />
+                Export Markdown
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => exportEntryAsJSON(latest)}
+              >
+                Export JSON
+              </Button>
+              <span className="text-sm text-muted-foreground self-center">
+                Run status: {latest.status}
+              </span>
+            </div>
+          )}
+        </div>
+        <aside className="tri-history">
+          <HistoryPanel
+            history={history || []}
+            onSelectEntry={setEntry}
+            onDeleteEntry={(id) =>
+              setHistory((old) => old.filter((item) => item.id !== id))
+            }
+            onClearAll={() => setHistory([])}
+          />
+        </aside>
       </div>
-
       <HistoryDetailModal
-        entry={selectedEntry}
-        open={showHistoryDetail}
-        onOpenChange={setShowHistoryDetail}
+        entry={entry}
+        open={Boolean(entry)}
+        onOpenChange={(open) => {
+          if (!open) setEntry(null)
+        }}
       />
-    </div>
+    </main>
   )
 }

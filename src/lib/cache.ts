@@ -1,4 +1,6 @@
 import { AIEngine } from './engines'
+import { kv } from './storage'
+import { getParametersForEngine } from './model-parameters'
 
 export interface CachedResponse {
   id: string
@@ -10,6 +12,7 @@ export interface CachedResponse {
   hitCount: number
   costSaved: number
   lastAccessed: number
+  parameters?: string
 }
 
 export interface CacheStats {
@@ -30,92 +33,39 @@ export interface SemanticMatch {
 
 const CACHE_KEY = 'ai-response-cache'
 const MAX_CACHE_SIZE = 100
-const SEMANTIC_THRESHOLD = 0.75 // 75% similarity for cache hit
 const CACHE_STATS_KEY = 'cache-statistics'
-
-/**
- * Calculate semantic similarity between two strings using Jaccard similarity
- */
-function calculateSimilarity(str1: string, str2: string): number {
-  const words1 = new Set(str1.toLowerCase().split(/\s+/))
-  const words2 = new Set(str2.toLowerCase().split(/\s+/))
-  
-  const intersection = new Set([...words1].filter(x => words2.has(x)))
-  const union = new Set([...words1, ...words2])
-  
-  return intersection.size / union.size
-}
-
-/**
- * Find semantically similar cached response
- */
-async function findSemanticMatch(
-  prompt: string,
-  engine: AIEngine,
-  coreId?: string
-): Promise<SemanticMatch | null> {
-  try {
-    const cache = (await window.spark.kv.get(CACHE_KEY) || []) as CachedResponse[]
-    
-    let bestMatch: SemanticMatch | null = null
-    let bestSimilarity = 0
-    
-    for (const entry of cache) {
-      if (entry.engine !== engine) continue
-      if (coreId && entry.coreId !== coreId) continue
-      
-      const similarity = calculateSimilarity(prompt, entry.prompt)
-      
-      if (similarity > bestSimilarity && similarity >= SEMANTIC_THRESHOLD) {
-        bestSimilarity = similarity
-        bestMatch = { entry, similarity }
-      }
-    }
-    
-    return bestMatch
-  } catch (error) {
-    console.error('Semantic match error:', error)
-    return null
-  }
-}
 
 export async function getCachedResponse(
   prompt: string,
   engine: AIEngine,
-  coreId?: string
+  coreId?: string,
 ): Promise<string | null> {
   try {
-    const cache = (await window.spark.kv.get(CACHE_KEY) || []) as CachedResponse[]
-    
+    const cache = ((await kv.get(CACHE_KEY)) || []) as CachedResponse[]
+
     const normalizedPrompt = normalizePrompt(prompt)
-    
+
     // Try exact match first using optimized comparison
     let match: CachedResponse | undefined
     for (const entry of cache) {
       // Early exit conditions to avoid unnecessary string normalization
       if (entry.engine !== engine) continue
+      if (entry.parameters !== JSON.stringify(getParametersForEngine(engine)))
+        continue
       if (coreId && entry.coreId !== coreId) continue
-      
+
       if (normalizePrompt(entry.prompt) === normalizedPrompt) {
         match = entry
         break
       }
     }
-    
-    // If no exact match, try semantic similarity
-    if (!match) {
-      const semanticMatch = await findSemanticMatch(prompt, engine, coreId)
-      if (semanticMatch) {
-        match = semanticMatch.entry
-      }
-    }
-    
+
     if (match) {
       // Update hit statistics
       await updateCacheHit(match.id)
       return match.response
     }
-    
+
     return null
   } catch (error) {
     console.error('Cache read error:', error)
@@ -127,11 +77,9 @@ export async function cacheResponse(
   prompt: string,
   response: string,
   engine: AIEngine,
-  coreId?: string
+  coreId?: string,
 ): Promise<void> {
   try {
-    let cache = (await window.spark.kv.get(CACHE_KEY) || []) as CachedResponse[]
-    
     const newEntry: CachedResponse = {
       id: generateCacheId(),
       prompt,
@@ -141,16 +89,13 @@ export async function cacheResponse(
       coreId,
       hitCount: 0,
       costSaved: 0,
-      lastAccessed: Date.now()
+      lastAccessed: Date.now(),
+      parameters: JSON.stringify(getParametersForEngine(engine)),
     }
-    
-    cache = [newEntry, ...cache]
-    
-    if (cache.length > MAX_CACHE_SIZE) {
-      cache = cache.slice(0, MAX_CACHE_SIZE)
-    }
-    
-    await window.spark.kv.set(CACHE_KEY, cache)
+
+    await kv.update<CachedResponse[]>(CACHE_KEY, (previous) =>
+      [newEntry, ...(previous || [])].slice(0, MAX_CACHE_SIZE),
+    )
   } catch (error) {
     console.error('Cache write error:', error)
   }
@@ -158,8 +103,8 @@ export async function cacheResponse(
 
 async function updateCacheHit(cacheId: string): Promise<void> {
   try {
-    const cache = (await window.spark.kv.get(CACHE_KEY) || []) as CachedResponse[]
-    const updated = cache.map(entry => {
+    const cache = ((await kv.get(CACHE_KEY)) || []) as CachedResponse[]
+    const updated = cache.map((entry) => {
       if (entry.id === cacheId) {
         // Estimate cost saved (approximate API call cost)
         const estimatedCost = 0.002 // $0.002 per cache hit
@@ -167,13 +112,13 @@ async function updateCacheHit(cacheId: string): Promise<void> {
           ...entry,
           hitCount: entry.hitCount + 1,
           costSaved: entry.costSaved + estimatedCost,
-          lastAccessed: Date.now()
+          lastAccessed: Date.now(),
         }
       }
       return entry
     })
-    await window.spark.kv.set(CACHE_KEY, updated)
-    
+    await kv.set(CACHE_KEY, updated)
+
     // Update global stats
     await incrementGlobalStats(0.002)
   } catch (error) {
@@ -183,13 +128,15 @@ async function updateCacheHit(cacheId: string): Promise<void> {
 
 async function incrementGlobalStats(costSaved: number): Promise<void> {
   try {
-    const stats = (await window.spark.kv.get(CACHE_STATS_KEY) || 
-      { totalHits: 0, totalSaved: 0 }) as { totalHits: number; totalSaved: number }
-    
+    const stats = ((await kv.get(CACHE_STATS_KEY)) || {
+      totalHits: 0,
+      totalSaved: 0,
+    }) as { totalHits: number; totalSaved: number }
+
     stats.totalHits += 1
     stats.totalSaved += costSaved
-    
-    await window.spark.kv.set(CACHE_STATS_KEY, stats)
+
+    await kv.set(CACHE_STATS_KEY, stats)
   } catch (error) {
     console.error('Stats update error:', error)
   }
@@ -197,7 +144,7 @@ async function incrementGlobalStats(costSaved: number): Promise<void> {
 
 export async function clearCache(): Promise<void> {
   try {
-    await window.spark.kv.delete(CACHE_KEY)
+    await kv.delete(CACHE_KEY)
   } catch (error) {
     console.error('Cache clear error:', error)
   }
@@ -205,32 +152,38 @@ export async function clearCache(): Promise<void> {
 
 export async function getCacheStats(): Promise<CacheStats> {
   try {
-    const cache = (await window.spark.kv.get(CACHE_KEY) || []) as CachedResponse[]
-    const globalStats = (await window.spark.kv.get(CACHE_STATS_KEY) || 
-      { totalHits: 0, totalSaved: 0 }) as { totalHits: number; totalSaved: number }
-    
-    const timestamps = cache.map(entry => entry.timestamp)
+    const cache = ((await kv.get(CACHE_KEY)) || []) as CachedResponse[]
+    const globalStats = ((await kv.get(CACHE_STATS_KEY)) || {
+      totalHits: 0,
+      totalSaved: 0,
+    }) as { totalHits: number; totalSaved: number }
+
+    const timestamps = cache.map((entry) => entry.timestamp)
     const oldestEntry = timestamps.length > 0 ? Math.min(...timestamps) : null
     const newestEntry = timestamps.length > 0 ? Math.max(...timestamps) : null
-    
+
     const cacheSize = formatCacheSize(JSON.stringify(cache).length)
-    
+
     const totalHits = cache.reduce((sum, entry) => sum + entry.hitCount, 0)
-    const totalCostSaved = cache.reduce((sum, entry) => sum + entry.costSaved, 0)
+    const totalCostSaved = cache.reduce(
+      (sum, entry) => sum + entry.costSaved,
+      0,
+    )
     const totalRequests = cache.length + globalStats.totalHits
-    const hitRate = totalRequests > 0 ? (globalStats.totalHits / totalRequests) * 100 : 0
-    
+    const hitRate =
+      totalRequests > 0 ? (globalStats.totalHits / totalRequests) * 100 : 0
+
     // Top cache hits
     const topHits = cache
-      .filter(e => e.hitCount > 0)
+      .filter((e) => e.hitCount > 0)
       .sort((a, b) => b.hitCount - a.hitCount)
       .slice(0, 5)
-      .map(e => ({
+      .map((e) => ({
         prompt: e.prompt.substring(0, 50) + (e.prompt.length > 50 ? '...' : ''),
         hits: e.hitCount,
-        saved: e.costSaved
+        saved: e.costSaved,
       }))
-    
+
     return {
       totalCached: cache.length,
       cacheSize,
@@ -239,7 +192,7 @@ export async function getCacheStats(): Promise<CacheStats> {
       totalHits: globalStats.totalHits,
       totalCostSaved: globalStats.totalSaved,
       hitRate,
-      topHits
+      topHits,
     }
   } catch (error) {
     console.error('Cache stats error:', error)
@@ -251,14 +204,14 @@ export async function getCacheStats(): Promise<CacheStats> {
       totalHits: 0,
       totalCostSaved: 0,
       hitRate: 0,
-      topHits: []
+      topHits: [],
     }
   }
 }
 
 export async function getAllCachedResponses(): Promise<CachedResponse[]> {
   try {
-    return (await window.spark.kv.get(CACHE_KEY) || []) as CachedResponse[]
+    return ((await kv.get(CACHE_KEY)) || []) as CachedResponse[]
   } catch (error) {
     console.error('Cache retrieval error:', error)
     return []
@@ -267,16 +220,16 @@ export async function getAllCachedResponses(): Promise<CachedResponse[]> {
 
 export async function deleteCachedResponse(id: string): Promise<void> {
   try {
-    const cache = (await window.spark.kv.get(CACHE_KEY) || []) as CachedResponse[]
-    const filtered = cache.filter(entry => entry.id !== id)
-    await window.spark.kv.set(CACHE_KEY, filtered)
+    const cache = ((await kv.get(CACHE_KEY)) || []) as CachedResponse[]
+    const filtered = cache.filter((entry) => entry.id !== id)
+    await kv.set(CACHE_KEY, filtered)
   } catch (error) {
     console.error('Cache delete error:', error)
   }
 }
 
 function normalizePrompt(prompt: string): string {
-  return prompt.trim().toLowerCase().replace(/\s+/g, ' ')
+  return prompt
 }
 
 function generateCacheId(): string {

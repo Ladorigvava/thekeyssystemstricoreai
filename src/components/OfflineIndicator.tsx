@@ -39,8 +39,12 @@ export function OfflineIndicator() {
           >
             <WifiSlash size={20} className="text-destructive" weight="bold" />
             <div>
-              <p className="text-sm font-medium text-foreground">You're offline</p>
-              <p className="text-xs text-muted-foreground">Using cached responses when available</p>
+              <p className="text-sm font-medium text-foreground">
+                You're offline
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Using cached responses when available
+              </p>
             </div>
           </motion.div>
         )}
@@ -48,7 +52,11 @@ export function OfflineIndicator() {
 
       {!isOnline && (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/30 border border-border/50">
-          <WifiSlash size={16} className="text-muted-foreground" weight="bold" />
+          <WifiSlash
+            size={16}
+            className="text-muted-foreground"
+            weight="bold"
+          />
           <span className="text-xs text-muted-foreground">Offline Mode</span>
         </div>
       )}
@@ -56,7 +64,7 @@ export function OfflineIndicator() {
       {isOnline && (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/30">
           <WifiHigh size={16} className="text-primary" weight="bold" />
-          <span className="text-xs text-primary">Online</span>
+          <span className="text-xs text-primary">Internet online</span>
         </div>
       )}
     </>

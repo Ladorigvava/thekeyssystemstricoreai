@@ -1,115 +1,48 @@
-# Deployment Guide
+# Deploy the Tri-Core workspace
 
-## How to Deploy to GitHub Spark
+Use a Node/Docker host with HTTPS and a persistent disk, running one app process. The SQLite implementation is not suitable for stateless serverless functions or several replicas sharing a file.
 
-This application is now built and ready to deploy. Follow these steps:
+## Prepare
 
-### Option 1: Deploy via GitHub Spark Web Interface (Recommended)
+1. Run `npm ci` and `npm run verify`.
+2. Configure `.env` privately using `.env.example`. Supply fresh provider credentials, a strong `APP_ACCESS_PASSWORD` of at least 16 characters, and `APP_ORIGIN` equal to the app's exact HTTPS origin (no path).
+3. Keep `DATABASE_PATH` on a persistent volume. Save an online SQLite backup before upgrades. The startup schema creation is additive.
 
-1. **Visit GitHub Spark**
-   - Go to https://githubnext.com/projects/spark
-   - Sign in with your GitHub account
-
-2. **Create/Connect Your Spark App**
-   - Look for "New Spark" or "Import from GitHub"
-   - Select this repository: `Ladorigvava/the-keys-system-duck`
-   - Or enter the repository URL: https://github.com/Ladorigvava/the-keys-system-duck
-
-3. **Configure the App**
-   - App ID is already configured: `2fb07cc302a1e318fe36` (from runtime.config.json)
-   - Template version: 1
-   - Database type: KV (key-value store)
-
-4. **Deploy**
-   - Click "Deploy" or "Publish"
-   - Wait for the deployment to complete
-   - You'll get a unique Spark URL (e.g., `https://spark-<your-app>.github.dev`)
-
-### Option 2: Deploy via Spark CLI (if available)
+## Docker
 
 ```bash
-# Install Spark CLI (if not already installed)
-npm install -g @github/spark-cli
-
-# Login to Spark
-spark login
-
-# Deploy from this directory
-spark deploy
-
-# Or specify the app
-spark deploy --app 2fb07cc302a1e318fe36
+docker compose up --build -d
 ```
 
-### Pre-Deployment Checklist
+The compose file binds port 3000 to host loopback. Point an existing HTTPS reverse proxy at `127.0.0.1:3000`, preserve the Host header, disable response buffering for `/api/ai`, and allow at least 180 seconds for streaming requests. Set `TRUST_PROXY=1` only when exactly one trusted proxy removes untrusted forwarded headers. Set `APP_ORIGIN` to the external origin before starting. Do not place credentials in image build arguments or client-prefixed environment variables.
 
-✅ Build completed successfully (`npm run build`)
-✅ Repository pushed to GitHub
-✅ `runtime.config.json` configured with app ID
-✅ `spark.meta.json` configured
-✅ All dependencies installed
+## Plain Node
 
-### After Deployment
+```bash
+npm ci
+npm run build
+NODE_ENV=production npm start
+```
 
-1. **Test AI Features**
-   - Visit your Spark URL
-   - Try each core (Chadrak, Nova, Triad)
-   - Test Tri-Core mode
-   - Test Audio and Video studios
-   - Verify all AI engines work (GPT-4o, Claude, Gemini)
+Use your process manager to restart on failure and terminate with SIGTERM. `HOST` defaults to loopback. Configure a protected proxy before binding to a public interface. Production startup refuses missing authentication or an invalid HTTPS origin.
 
-2. **Verify Features**
-   - Connection status should show "Connected to GitHub Spark Runtime" ✅
-   - No 404 errors
-   - History saving works
-   - Cache system functions
-   - Theme switching works
+## Acceptance checks
 
-3. **Check Console**
-   - Open browser DevTools (F12)
-   - Look for any errors in Console
-   - Verify `window.spark` is available
-   - Check Network tab for successful API calls
+- `/api/health` returns `status: ok`.
+- The sign-in page appears, and protected API endpoints return 401 before sign-in.
+- Run a harmless prompt once through all three cores. Confirm text, the actual provider/model, response identifiers, and three completed statuses.
+- Reload and reopen history; confirm the saved input and outputs. Restart the server and verify again.
+- Test an unavailable provider: the other cores finish and the run is marked partial.
+- Confirm external requests are limited to the chosen providers and server keys are absent from downloaded assets.
 
-### Troubleshooting Deployment
+## Operations
 
-**If deployment fails:**
+Sessions expire after 12 hours. The default owner request limit is 60 per minute and eight concurrent requests. Provider limits and charges still apply. No automatic model fallback or automatic retry of a failed AI request is enabled; this keeps routing and billing explicit. The idempotency key prevents duplicate execution of the same submitted request.
 
-1. Check that you're logged into GitHub
-2. Verify the repository is public (or you have access)
-3. Ensure the app ID in `runtime.config.json` is valid
-4. Check Spark platform status
+Use a filesystem permission of 0700 for the database directory. Back up the entire owner data store securely and set your retention policy. The UI keeps at most 200 entries in each newly repaired history flow. The API run log requires an operator retention policy; it is not pruned automatically.
 
-**If AI features still don't work after deployment:**
+## Existing hosting
 
-1. Check browser console for errors
-2. Verify you're accessing the Spark URL (not localhost)
-3. Check that `window.spark.llm` exists in the console
-4. Review [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+GitHub Pages serves static assets and cannot host this backend. The old Pages deployment, Heroku instructions with browser-exposed keys, and the former Vercel static configuration are superseded. Standard Heroku dyno storage is ephemeral; do not put this database there without adapting the storage layer to a durable database. Vercel deployment likewise requires a durable database adapter before enabling it.
 
-### Current Build Info
-
-- **Build Date**: November 30, 2025
-- **Build Output**: `dist/` directory
-- **Main Bundle**: `dist/assets/index-Y9-l7QAZ.js` (649.23 kB)
-- **Styles**: `dist/assets/index-CosQbPmh.css` (383.39 kB)
-- **Entry Point**: `dist/index.html`
-
-### Repository Info
-
-- **GitHub URL**: https://github.com/Ladorigvava/the-keys-system-duck
-- **App ID**: 2fb07cc302a1e318fe36
-- **Latest Commit**: Includes AI engine fixes and local dev documentation
-
-### Next Steps
-
-1. Visit https://githubnext.com/projects/spark
-2. Deploy this repository
-3. Access your Spark URL
-4. Enjoy full AI functionality! 🚀
-
-## Need Help?
-
-- GitHub Spark Docs: https://githubnext.com/projects/spark
-- Repository Issues: https://github.com/Ladorigvava/the-keys-system-duck/issues
-- Troubleshooting: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+This change does not provision a cloud resource, open billing, replace your domain, or deploy to an unidentified host.

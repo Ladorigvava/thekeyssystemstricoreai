@@ -18,7 +18,11 @@ interface HistoryDetailModalProps {
   onOpenChange: (open: boolean) => void
 }
 
-export function HistoryDetailModal({ entry, open, onOpenChange }: HistoryDetailModalProps) {
+export function HistoryDetailModal({
+  entry,
+  open,
+  onOpenChange,
+}: HistoryDetailModalProps) {
   if (!entry) return null
 
   const isTriCore = entry.mode === 'tricore' && typeof entry.output === 'object'
@@ -29,13 +33,19 @@ export function HistoryDetailModal({ entry, open, onOpenChange }: HistoryDetailM
         <DialogHeader>
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="border-primary/50 text-primary">
-              {CORE_CONFIGS[entry.mode].name}
+              {CORE_CONFIGS[entry.mode]?.name || entry.mode}
             </Badge>
             <DialogDescription className="text-xs">
               {formatTimestamp(entry.timestamp)}
             </DialogDescription>
           </div>
           <DialogTitle className="text-xl">Historical Analysis</DialogTitle>
+          {entry.status && <p className="text-sm">Status: {entry.status}</p>}
+          {entry.engine && (
+            <p className="text-sm break-words text-muted-foreground">
+              {entry.engine}
+            </p>
+          )}
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden">
@@ -58,27 +68,51 @@ export function HistoryDetailModal({ entry, open, onOpenChange }: HistoryDetailM
                 <h4 className="text-sm font-medium mb-4 uppercase tracking-wide text-muted-foreground">
                   {isTriCore ? 'Tri-Core Results' : 'Output'}
                 </h4>
-                
+
                 {isTriCore ? (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div className="h-[400px]">
                       <OutputPanel
                         title="Chadrak Core"
-                        content={(entry.output as { chadrak: string; nova: string; triad: string }).chadrak}
+                        content={
+                          (
+                            entry.output as {
+                              chadrak: string
+                              nova: string
+                              triad: string
+                            }
+                          ).chadrak
+                        }
                         badge="Structure"
                       />
                     </div>
                     <div className="h-[400px]">
                       <OutputPanel
                         title="Nova Core"
-                        content={(entry.output as { chadrak: string; nova: string; triad: string }).nova}
+                        content={
+                          (
+                            entry.output as {
+                              chadrak: string
+                              nova: string
+                              triad: string
+                            }
+                          ).nova
+                        }
                         badge="Narrative"
                       />
                     </div>
                     <div className="h-[400px]">
                       <OutputPanel
                         title="Triad Core"
-                        content={(entry.output as { chadrak: string; nova: string; triad: string }).triad}
+                        content={
+                          (
+                            entry.output as {
+                              chadrak: string
+                              nova: string
+                              triad: string
+                            }
+                          ).triad
+                        }
                         badge="Execution"
                       />
                     </div>

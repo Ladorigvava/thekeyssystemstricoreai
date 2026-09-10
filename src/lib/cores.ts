@@ -1,4 +1,5 @@
-export type CoreMode = 'chadrak' | 'nova' | 'triad' | 'tricore' | 'audio' | 'video'
+export type CoreMode =
+  'chadrak' | 'nova' | 'triad' | 'tricore' | 'audio' | 'video'
 
 export interface CoreConfig {
   id: CoreMode
@@ -23,7 +24,7 @@ Organize your response with clear headings and bullet points. Focus on:
 - Legal, strategic, or analytical considerations
 
 Be thorough, precise, and objective.`,
-    buttonLabel: 'Analyze Structure'
+    buttonLabel: 'Analyze Structure',
   },
   nova: {
     id: 'nova',
@@ -39,7 +40,7 @@ Focus on:
 - Emotional resonance and engagement
 
 Provide both analysis and an improved version when appropriate. Be constructive and specific.`,
-    buttonLabel: 'Refine Narrative'
+    buttonLabel: 'Refine Narrative',
   },
   triad: {
     id: 'triad',
@@ -55,20 +56,21 @@ Organize your response into clear phases or stages:
 - Provide realistic timelines where relevant
 
 Focus on implementability and practical execution.`,
-    buttonLabel: 'Create Plan'
+    buttonLabel: 'Create Plan',
   },
   tricore: {
     id: 'tricore',
     name: 'Tri-Core',
     description: 'All three cores analyzing the same input simultaneously',
     systemPrompt: '',
-    buttonLabel: 'Run Tri-Core Analysis'
+    buttonLabel: 'Run Tri-Core Analysis',
   },
   audio: {
     id: 'audio',
-    name: '🎵 Quantum Audio Lab',
-    description: 'Quantum-level audio generation - Music, Voice, SFX across 27 AI engines',
-    systemPrompt: `You are a QUANTUM-LEVEL Audio Production Specialist with access to ALL 27 AI engines. Generate professional audio briefs for Suno, Udio, MusicGen, ElevenLabs, and all AI audio tools.
+    name: 'Audio Studio',
+    description:
+      'Create music briefs, voice scripts, and sound design instructions.',
+    systemPrompt: `You are a QUANTUM-LEVEL Audio Production Specialist . Generate professional audio briefs for Suno, Udio, MusicGen, ElevenLabs, and all AI audio tools.
 
 QUANTUM AUDIO WORKFLOW:
 
@@ -85,13 +87,13 @@ For Music: Genre, BPM, key, instruments, song structure, energy curve, mixing st
 For Voice: Characteristics, emotional delivery, pacing, emphasis, pronunciation, pauses
 
 Channel Grammy-winning production expertise with AI neural network mastery.`,
-    buttonLabel: '🎬 Generate Quantum Audio'
+    buttonLabel: 'Generate Audio Brief',
   },
   video: {
     id: 'video',
-    name: '🎥 Quantum Video Lab',
-    description: 'Quantum-level video generation - Cinematic AI across 27 engines',
-    systemPrompt: `You are a QUANTUM-LEVEL Video Production Specialist with access to ALL 27 AI engines. Generate cinematic video briefs for Runway, Pika, Sora, and all AI video tools.
+    name: 'Video Studio',
+    description: 'Create video scripts, storyboards, and production briefs.',
+    systemPrompt: `You are a QUANTUM-LEVEL Video Production Specialist . Generate cinematic video briefs for Runway, Pika, Sora, and all AI video tools.
 
 QUANTUM VIDEO WORKFLOW:
 
@@ -109,6 +111,6 @@ For Each Scene: Duration, camera movement, lighting description, subject actions
 Technical: Aspect ratio 16:9/9:16/1:1, Resolution 720p/1080p/4K, FPS 24/30/60
 
 Channel Christopher Nolan cinematography with cutting-edge AI filmmaking.`,
-    buttonLabel: '🎬 Generate Quantum Video'
-  }
+    buttonLabel: 'Generate Video Brief',
+  },
 }

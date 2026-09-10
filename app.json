@@ -1,35 +1,28 @@
 {
-  "name": "The Keys System - Tri-Core AI",
-  "description": "A powerful AI interface with tri-core architecture supporting GPT-4, Claude, and Gemini",
-  "repository": "https://github.com/Ladorigvava/the-keys-system-duck",
-  "keywords": ["ai", "react", "vite", "chatbot", "openai", "anthropic", "google-ai"],
+  "name": "Tri-Core workspace",
+  "description": "See DEPLOYMENT.md. A persistent database is required; the default ephemeral dyno filesystem is not supported.",
   "buildpacks": [
     {
       "url": "heroku/nodejs"
     }
   ],
   "env": {
-    "VITE_OPENAI_API_KEY": {
-      "description": "OpenAI API key for GPT models (get from https://platform.openai.com/api-keys)",
+    "APP_ACCESS_PASSWORD": {
+      "description": "Private owner workspace password; minimum 16 characters",
+      "required": true
+    },
+    "APP_ORIGIN": {
+      "description": "Exact external HTTPS origin",
+      "required": true
+    },
+    "OPENAI_API_KEY": {
       "required": false
     },
-    "VITE_ANTHROPIC_API_KEY": {
-      "description": "Anthropic API key for Claude models (get from https://console.anthropic.com/)",
+    "ANTHROPIC_API_KEY": {
       "required": false
     },
-    "VITE_GOOGLE_AI_API_KEY": {
-      "description": "Google AI API key for Gemini models (get from https://makersuite.google.com/app/apikey)",
+    "GOOGLE_AI_API_KEY": {
       "required": false
     }
-  },
-  "formation": {
-    "web": {
-      "quantity": 1,
-      "size": "basic"
-    }
-  },
-  "addons": [],
-  "scripts": {
-    "postdeploy": "echo 'Deployment successful! Make sure to set at least one API key (VITE_OPENAI_API_KEY, VITE_ANTHROPIC_API_KEY, or VITE_GOOGLE_AI_API_KEY) in the Heroku dashboard.'"
   }
 }

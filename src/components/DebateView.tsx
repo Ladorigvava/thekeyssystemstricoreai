@@ -10,27 +10,36 @@ import { Separator } from './ui/separator'
 import { Checkbox } from './ui/checkbox'
 import { Label } from './ui/label'
 import { AIEngine, ENGINE_CONFIGS } from '@/lib/engines'
-import { runDebate, synthesizeDebate, voteOnArguments, type DebateSynthesis } from '@/lib/debate'
-import { 
-  UsersThree, 
-  Gavel, 
-  Trophy, 
+import {
+  runDebate,
+  synthesizeDebate,
+  voteOnArguments,
+  type DebateSynthesis,
+} from '@/lib/debate'
+import {
+  UsersThree,
+  Gavel,
+  Trophy,
   Sparkle,
   CircleNotch,
-  CheckCircle
+  CheckCircle,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
 export function DebateView({ onBack }: { onBack: () => void }) {
   const [question, setQuestion] = useState('')
   const [selectedEngines, setSelectedEngines] = useState<Set<AIEngine>>(
-    new Set(['gpt-4o', 'claude-3-5-sonnet-20241022', 'gemini-2.0-flash-exp'] as AIEngine[])
+    new Set(['gpt-4o', 'claude-sonnet-5', 'gemini-2.5-flash'] as AIEngine[]),
   )
   const [isDebating, setIsDebating] = useState(false)
-  const [debateArguments, setDebateArguments] = useState<Map<AIEngine, string>>(new Map())
+  const [debateArguments, setDebateArguments] = useState<Map<AIEngine, string>>(
+    new Map(),
+  )
   const [synthesis, setSynthesis] = useState<DebateSynthesis | null>(null)
   const [votes, setVotes] = useState<Map<AIEngine, number>>(new Map())
-  const [stage, setStage] = useState<'select' | 'debating' | 'voting' | 'complete'>('select')
+  const [stage, setStage] = useState<
+    'select' | 'debating' | 'voting' | 'complete'
+  >('select')
 
   const toggleEngine = (engine: AIEngine) => {
     const newSet = new Set(selectedEngines)
@@ -51,7 +60,7 @@ export function DebateView({ onBack }: { onBack: () => void }) {
       toast.error('Enter a question first')
       return
     }
-    
+
     if (selectedEngines.size < 2) {
       toast.error('Select at least 2 engines for debate')
       return
@@ -69,38 +78,39 @@ export function DebateView({ onBack }: { onBack: () => void }) {
         question,
         Array.from(selectedEngines),
         (engine, partial) => {
-          setDebateArguments(prev => new Map(prev).set(engine, partial))
-        }
+          setDebateArguments((prev) => new Map(prev).set(engine, partial))
+        },
       )
-      
+
       setDebateArguments(results)
       setStage('voting')
-      
+
       // Vote on arguments
       const voteResults = await voteOnArguments(question, results)
       setVotes(voteResults)
-      
+
       // Synthesize debate
       const synthResult = await synthesizeDebate(question, results)
       setSynthesis(synthResult)
-      
+
       setStage('complete')
       toast.success('Debate complete!', {
-        description: 'AI moderator has synthesized the arguments'
+        description: 'AI moderator has synthesized the arguments',
       })
     } catch (error) {
       console.error('Debate error:', error)
       toast.error('Debate failed', {
-        description: 'Please try again or select different engines'
+        description: 'Please try again or select different engines',
       })
     } finally {
       setIsDebating(false)
     }
   }
 
-  const topEngine = votes.size > 0
-    ? Array.from(votes.entries()).reduce((a, b) => (a[1] > b[1] ? a : b))[0]
-    : null
+  const topEngine =
+    votes.size > 0
+      ? Array.from(votes.entries()).reduce((a, b) => (a[1] > b[1] ? a : b))[0]
+      : null
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden">
@@ -113,7 +123,11 @@ export function DebateView({ onBack }: { onBack: () => void }) {
                 Revolutionary Feature
               </div>
               <div className="flex items-center gap-2">
-                <UsersThree size={20} weight="duotone" className="text-primary shrink-0" />
+                <UsersThree
+                  size={20}
+                  weight="duotone"
+                  className="text-primary shrink-0"
+                />
                 <h1 className="text-xl md:text-2xl font-bold tracking-tight truncate">
                   Multi-Agent Debate
                 </h1>
@@ -169,7 +183,9 @@ export function DebateView({ onBack }: { onBack: () => void }) {
                             className="mt-0.5"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm">{engine.name}</div>
+                            <div className="font-medium text-sm">
+                              {engine.name}
+                            </div>
                             <div className="text-xs text-muted-foreground">
                               {engine.provider}
                             </div>
@@ -181,7 +197,9 @@ export function DebateView({ onBack }: { onBack: () => void }) {
 
                   <Button
                     onClick={handleStartDebate}
-                    disabled={isDebating || !question.trim() || selectedEngines.size < 2}
+                    disabled={
+                      isDebating || !question.trim() || selectedEngines.size < 2
+                    }
                     className="w-full gap-2"
                     size="lg"
                   >
@@ -194,18 +212,26 @@ export function DebateView({ onBack }: { onBack: () => void }) {
           )}
 
           {/* Debate in Progress / Results */}
-          {(stage === 'debating' || stage === 'voting' || stage === 'complete') && (
+          {(stage === 'debating' ||
+            stage === 'voting' ||
+            stage === 'complete') && (
             <div className="space-y-6">
               {/* Question Card */}
               <ConsoleCard glass className="p-4">
                 <div className="flex items-start gap-3">
                   <Gavel size={20} className="text-primary mt-1 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-muted-foreground mb-1">Debating:</div>
+                    <div className="text-xs text-muted-foreground mb-1">
+                      Debating:
+                    </div>
                     <div className="font-semibold">{question}</div>
                   </div>
                   {stage === 'complete' && (
-                    <Button variant="outline" size="sm" onClick={() => setStage('select')}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setStage('select')}
+                    >
                       New Debate
                     </Button>
                   )}
@@ -225,18 +251,25 @@ export function DebateView({ onBack }: { onBack: () => void }) {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                     >
-                      <ConsoleCard glass className={`p-4 ${isWinner ? 'border-amber-500/50 bg-amber-500/5' : ''}`}>
+                      <ConsoleCard
+                        glass
+                        className={`p-4 ${isWinner ? 'border-amber-500/50 bg-amber-500/5' : ''}`}
+                      >
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline">{ENGINE_CONFIGS[engine].name}</Badge>
+                              <Badge variant="outline">
+                                {ENGINE_CONFIGS[engine].name}
+                              </Badge>
                               {isWinner && (
                                 <Trophy size={16} className="text-amber-400" />
                               )}
                             </div>
                             {score !== undefined && (
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground">Score:</span>
+                                <span className="text-xs text-muted-foreground">
+                                  Score:
+                                </span>
                                 <Badge className="bg-primary/20 text-primary">
                                   {score}/10
                                 </Badge>
@@ -266,11 +299,16 @@ export function DebateView({ onBack }: { onBack: () => void }) {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
-                  <ConsoleCard glass className="p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/30">
+                  <ConsoleCard
+                    glass
+                    className="p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/30"
+                  >
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <Sparkle size={20} className="text-primary" />
-                        <h3 className="font-bold text-lg">AI Moderator Synthesis</h3>
+                        <h3 className="font-bold text-lg">
+                          AI Moderator Synthesis
+                        </h3>
                       </div>
 
                       <Separator />
@@ -280,14 +318,18 @@ export function DebateView({ onBack }: { onBack: () => void }) {
                           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                             Summary
                           </div>
-                          <p className="text-sm text-foreground/90">{synthesis.summary}</p>
+                          <p className="text-sm text-foreground/90">
+                            {synthesis.summary}
+                          </p>
                         </div>
 
                         <div>
                           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                             Consensus
                           </div>
-                          <p className="text-sm text-foreground/90">{synthesis.consensus}</p>
+                          <p className="text-sm text-foreground/90">
+                            {synthesis.consensus}
+                          </p>
                         </div>
 
                         <div>
@@ -296,9 +338,17 @@ export function DebateView({ onBack }: { onBack: () => void }) {
                           </div>
                           <ul className="space-y-1.5">
                             {synthesis.keyPoints.map((point, i) => (
-                              <li key={i} className="flex items-start gap-2 text-sm">
-                                <CheckCircle size={16} className="text-primary mt-0.5 shrink-0" />
-                                <span className="text-foreground/90">{point}</span>
+                              <li
+                                key={i}
+                                className="flex items-start gap-2 text-sm"
+                              >
+                                <CheckCircle
+                                  size={16}
+                                  className="text-primary mt-0.5 shrink-0"
+                                />
+                                <span className="text-foreground/90">
+                                  {point}
+                                </span>
                               </li>
                             ))}
                           </ul>
@@ -308,7 +358,9 @@ export function DebateView({ onBack }: { onBack: () => void }) {
                           <div className="text-xs font-semibold uppercase tracking-wider text-primary mb-2">
                             Recommendation
                           </div>
-                          <p className="text-sm text-foreground/90">{synthesis.recommendation}</p>
+                          <p className="text-sm text-foreground/90">
+                            {synthesis.recommendation}
+                          </p>
                         </div>
                       </div>
                     </div>

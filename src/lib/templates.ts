@@ -17,17 +17,18 @@ export const TEMPLATE_CATEGORIES = [
   'Creative Writing',
   'Marketing & Sales',
   'Education & Learning',
-  'Problem Solving'
+  'Problem Solving',
 ] as const
 
-export type TemplateCategory = typeof TEMPLATE_CATEGORIES[number]
+export type TemplateCategory = (typeof TEMPLATE_CATEGORIES)[number]
 
 export const PROMPT_TEMPLATES: PromptTemplate[] = [
   // Business Strategy
   {
     id: 'business-plan',
     name: 'Business Plan Generator',
-    description: 'Create a comprehensive business plan for a startup or new venture',
+    description:
+      'Create a comprehensive business plan for a startup or new venture',
     category: 'Business Strategy',
     prompt: `Create a detailed business plan for {{BUSINESS_NAME}}, a {{BUSINESS_TYPE}} company targeting {{TARGET_MARKET}}.
 
@@ -43,8 +44,8 @@ Include:
 
 Make it professional, data-driven, and investor-ready.`,
     variables: ['BUSINESS_NAME', 'BUSINESS_TYPE', 'TARGET_MARKET'],
-    recommendedEngine: 'o1',
-    coreMode: 'triad'
+    recommendedEngine: 'gpt-5.2',
+    coreMode: 'triad',
   },
   {
     id: 'swot-analysis',
@@ -63,8 +64,8 @@ Provide:
 
 Include specific, actionable insights and strategic recommendations.`,
     variables: ['COMPANY_NAME', 'INDUSTRY', 'ADDITIONAL_CONTEXT'],
-    recommendedEngine: 'claude-3-7-sonnet-20250219',
-    coreMode: 'chadrak'
+    recommendedEngine: 'claude-sonnet-5',
+    coreMode: 'chadrak',
   },
   {
     id: 'market-research',
@@ -83,7 +84,7 @@ Provide:
 5. Success metrics`,
     variables: ['PRODUCT_NAME', 'TARGET_AUDIENCE', 'OBJECTIVES'],
     recommendedEngine: 'gpt-4o',
-    coreMode: 'triad'
+    coreMode: 'triad',
   },
 
   // Content Creation
@@ -107,8 +108,8 @@ Requirements:
 - Meta description (160 chars)
 - 3-5 internal linking opportunities`,
     variables: ['TOPIC', 'KEYWORD', 'AUDIENCE', 'TONE'],
-    recommendedEngine: 'claude-3-5-sonnet-20241022',
-    coreMode: 'nova'
+    recommendedEngine: 'claude-sonnet-5',
+    coreMode: 'nova',
   },
   {
     id: 'social-media-campaign',
@@ -128,9 +129,15 @@ Provide:
 - Hashtag strategy
 - Engagement tactics
 - Success metrics and KPIs`,
-    variables: ['BRAND_NAME', 'PRODUCT_SERVICE', 'CAMPAIGN_GOALS', 'PLATFORMS', 'BUDGET'],
+    variables: [
+      'BRAND_NAME',
+      'PRODUCT_SERVICE',
+      'CAMPAIGN_GOALS',
+      'PLATFORMS',
+      'BUDGET',
+    ],
     recommendedEngine: 'gpt-4o',
-    coreMode: 'triad'
+    coreMode: 'triad',
   },
 
   // Code & Development
@@ -153,8 +160,8 @@ Analyze:
 5. Potential bugs or edge cases
 6. Suggested improvements with examples`,
     variables: ['LANGUAGE', 'CODE'],
-    recommendedEngine: 'claude-3-5-sonnet-20241022',
-    coreMode: 'chadrak'
+    recommendedEngine: 'claude-sonnet-5',
+    coreMode: 'chadrak',
   },
   {
     id: 'api-documentation',
@@ -176,7 +183,7 @@ Include:
 - Best practices guide`,
     variables: ['API_NAME', 'ENDPOINTS', 'LANGUAGES'],
     recommendedEngine: 'gpt-4o',
-    coreMode: 'nova'
+    coreMode: 'nova',
   },
   {
     id: 'debug-assistant',
@@ -199,8 +206,8 @@ Provide:
 3. Fixed code with explanations
 4. Prevention tips for future`,
     variables: ['LANGUAGE', 'ERROR_DESCRIPTION', 'CODE', 'ERROR_MESSAGE'],
-    recommendedEngine: 'claude-3-7-sonnet-20250219',
-    coreMode: 'chadrak'
+    recommendedEngine: 'claude-sonnet-5',
+    coreMode: 'chadrak',
   },
 
   // Analysis & Research
@@ -222,8 +229,8 @@ Provide:
 5. Gaps and opportunities
 6. Strategic recommendations`,
     variables: ['YOUR_COMPANY', 'COMPETITORS', 'INDUSTRY', 'FOCUS_AREAS'],
-    recommendedEngine: 'o1',
-    coreMode: 'chadrak'
+    recommendedEngine: 'gpt-5.2',
+    coreMode: 'chadrak',
   },
   {
     id: 'research-summary',
@@ -242,8 +249,8 @@ Provide:
 - Related research areas
 - Citation in APA format`,
     variables: ['TOPIC', 'FULL_TEXT'],
-    recommendedEngine: 'claude-3-5-sonnet-20241022',
-    coreMode: 'chadrak'
+    recommendedEngine: 'claude-sonnet-5',
+    coreMode: 'chadrak',
   },
 
   // Creative Writing
@@ -267,8 +274,8 @@ Include:
 - Themes and symbolism
 - Potential chapter/scene breakdown (12-15 chapters)`,
     variables: ['GENRE', 'PREMISE', 'SETTING', 'AUDIENCE'],
-    recommendedEngine: 'claude-3-7-sonnet-20250219',
-    coreMode: 'nova'
+    recommendedEngine: 'claude-sonnet-5',
+    coreMode: 'nova',
   },
   {
     id: 'script-dialogue',
@@ -290,8 +297,8 @@ Requirements:
 - Action lines between dialogue
 - 2-3 pages`,
     variables: ['SCENE_DESCRIPTION', 'CHARACTERS', 'TONE', 'SCENE_GOAL'],
-    recommendedEngine: 'claude-3-5-sonnet-20241022',
-    coreMode: 'nova'
+    recommendedEngine: 'claude-sonnet-5',
+    coreMode: 'nova',
   },
 
   // Marketing & Sales
@@ -314,9 +321,15 @@ Include:
 - Channel mix and messaging
 - Influencer/PR strategy
 - Success metrics`,
-    variables: ['PRODUCT_NAME', 'PRODUCT_DESCRIPTION', 'TARGET_MARKET', 'LAUNCH_DATE', 'BUDGET'],
+    variables: [
+      'PRODUCT_NAME',
+      'PRODUCT_DESCRIPTION',
+      'TARGET_MARKET',
+      'LAUNCH_DATE',
+      'BUDGET',
+    ],
     recommendedEngine: 'gpt-4o',
-    coreMode: 'triad'
+    coreMode: 'triad',
   },
   {
     id: 'sales-email',
@@ -337,9 +350,14 @@ Each email should:
 - Be 150-250 words
 
 Provide all 5 emails with timing recommendations.`,
-    variables: ['PRODUCT_SERVICE', 'TARGET_PERSONA', 'PAIN_POINTS', 'VALUE_PROPOSITION'],
-    recommendedEngine: 'claude-3-5-sonnet-20241022',
-    coreMode: 'nova'
+    variables: [
+      'PRODUCT_SERVICE',
+      'TARGET_PERSONA',
+      'PAIN_POINTS',
+      'VALUE_PROPOSITION',
+    ],
+    recommendedEngine: 'claude-sonnet-5',
+    coreMode: 'nova',
   },
 
   // Education & Learning
@@ -365,7 +383,7 @@ Include:
 - Homework assignment`,
     variables: ['SUBJECT', 'GRADE_LEVEL', 'TOPIC', 'DURATION', 'OBJECTIVES'],
     recommendedEngine: 'gpt-4o',
-    coreMode: 'triad'
+    coreMode: 'triad',
   },
   {
     id: 'explain-concept',
@@ -385,8 +403,8 @@ Requirements:
 - Practical applications
 - Further learning resources`,
     variables: ['CONCEPT', 'AUDIENCE_LEVEL', 'CONTEXT'],
-    recommendedEngine: 'claude-3-7-sonnet-20250219',
-    coreMode: 'nova'
+    recommendedEngine: 'claude-sonnet-5',
+    coreMode: 'nova',
   },
 
   // Problem Solving
@@ -411,8 +429,8 @@ Use a structured framework to:
 5. Provide recommendation with rationale
 6. Outline implementation steps`,
     variables: ['DECISION', 'OPTIONS', 'CONSTRAINTS', 'TIMEFRAME'],
-    recommendedEngine: 'o1',
-    coreMode: 'chadrak'
+    recommendedEngine: 'gpt-5.2',
+    coreMode: 'chadrak',
   },
   {
     id: 'root-cause-analysis',
@@ -434,32 +452,38 @@ Use:
 5. Recommended solutions (short-term and long-term)
 6. Prevention strategies`,
     variables: ['PROBLEM_DESCRIPTION', 'CONTEXT', 'IMPACT'],
-    recommendedEngine: 'claude-3-7-sonnet-20250219',
-    coreMode: 'chadrak'
-  }
+    recommendedEngine: 'claude-sonnet-5',
+    coreMode: 'chadrak',
+  },
 ]
 
 // Template management functions
-export function getTemplatesByCategory(category: TemplateCategory): PromptTemplate[] {
-  return PROMPT_TEMPLATES.filter(t => t.category === category)
+export function getTemplatesByCategory(
+  category: TemplateCategory,
+): PromptTemplate[] {
+  return PROMPT_TEMPLATES.filter((t) => t.category === category)
 }
 
 export function searchTemplates(query: string): PromptTemplate[] {
   const lowerQuery = query.toLowerCase()
-  return PROMPT_TEMPLATES.filter(t => 
-    t.name.toLowerCase().includes(lowerQuery) ||
-    t.description.toLowerCase().includes(lowerQuery) ||
-    t.category.toLowerCase().includes(lowerQuery)
+  return PROMPT_TEMPLATES.filter(
+    (t) =>
+      t.name.toLowerCase().includes(lowerQuery) ||
+      t.description.toLowerCase().includes(lowerQuery) ||
+      t.category.toLowerCase().includes(lowerQuery),
   )
 }
 
 export function getTemplateById(id: string): PromptTemplate | undefined {
-  return PROMPT_TEMPLATES.find(t => t.id === id)
+  return PROMPT_TEMPLATES.find((t) => t.id === id)
 }
 
-export function fillTemplate(template: PromptTemplate, values: Record<string, string>): string {
+export function fillTemplate(
+  template: PromptTemplate,
+  values: Record<string, string>,
+): string {
   let filled = template.prompt
-  template.variables.forEach(variable => {
+  template.variables.forEach((variable) => {
     const value = values[variable] || `[${variable}]`
     filled = filled.replace(new RegExp(`{{${variable}}}`, 'g'), value)
   })
@@ -469,11 +493,13 @@ export function fillTemplate(template: PromptTemplate, values: Record<string, st
 // Save custom user templates
 const CUSTOM_TEMPLATES_KEY = 'custom-prompt-templates'
 
-export function saveCustomTemplate(template: Omit<PromptTemplate, 'id'>): PromptTemplate {
+export function saveCustomTemplate(
+  template: Omit<PromptTemplate, 'id'>,
+): PromptTemplate {
   const customTemplates = getCustomTemplates()
   const newTemplate: PromptTemplate = {
     ...template,
-    id: `custom-${Date.now()}`
+    id: `custom-${Date.now()}`,
   }
   customTemplates.push(newTemplate)
   localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(customTemplates))
@@ -491,7 +517,7 @@ export function getCustomTemplates(): PromptTemplate[] {
 
 export function deleteCustomTemplate(id: string): void {
   const customTemplates = getCustomTemplates()
-  const filtered = customTemplates.filter(t => t.id !== id)
+  const filtered = customTemplates.filter((t) => t.id !== id)
   localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(filtered))
 }
 
