@@ -20,8 +20,9 @@ export function GoogleFlowPanel({ input }: { input: FlowBriefInput }) {
     setBrief('')
     const timeout = setTimeout(() => request.abort(), 120_000)
     try {
+      const host = window.location.hostname
       const apiBase = import.meta.env.VITE_API_URL ||
-        (window.location.hostname === 'localhost' ? 'http://localhost:3001' : '')
+        (['localhost', '127.0.0.1'].includes(host) ? `http://${host}:3001` : '')
       const result = await generateFlowBrief(input, apiBase, request.signal)
       if (!request.signal.aborted) setBrief(result)
     } catch (err) {

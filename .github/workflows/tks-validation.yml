@@ -1,0 +1,21 @@
+name: TKS validation
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, codex/google-flow-openai-handoff]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/*.test.mjs
+      - run: npx tsc --noEmit
+      - run: npm run build

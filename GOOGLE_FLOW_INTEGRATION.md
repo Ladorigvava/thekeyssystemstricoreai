@@ -34,15 +34,23 @@ Official references:
 
 ## Validation
 
-Run `node --test tests/google-flow.test.mjs` with Node 22.18+ (native TypeScript
+Run `node --test tests/*.test.mjs` with Node 22.18+ (native TypeScript
 stripping), or Node 24+. Tests use stub responses and spend no API credits.
 Run `npm run build` for the full application. A real generation requires the
 configured OpenAI backend and must be checked separately from mocked tests.
 
-At implementation time, the five focused tests and an isolated TypeScript check
-of the new component and helper passed. The full application build is blocked by
-pre-existing syntax corruption in `src/lib/engines.ts` and
-`src/lib/performance-analytics.ts` at base commit
-`c8e00352512997b3a49757f30c96f9e0574fadc4`. Those files were not modified by this
-integration. Full application UI verification and live generation remain pending;
-this change must not be treated as deployable until the baseline is repaired.
+The pre-existing syntax corruption in `src/lib/engines.ts` and
+`src/lib/performance-analytics.ts` has been repaired. The registry preserves the
+28 model IDs used by the cost table, the default OpenAI engine, and storage keys.
+Legacy model availability is not certified by this repair. Analytics validates
+stored records, bounds history, and ranks only successful observations.
+
+Validation: all ten tests, the full TypeScript check (`npx tsc --noEmit`) and the
+production build pass. Chrome verification covers opening Video Studio, the
+disabled empty-input action, and the explicit missing-OpenAI-key error. Live paid
+generation remains unverified. The TKS validation workflow repeats tests, type
+checking and building in CI.
+
+The default build uses `/` for a Node-hosted app. The Pages deployment workflow
+sets `VITE_BASE_PATH=/thekeyssystemstricoreai/`. Configure `VITE_API_URL` at build
+time when the API is hosted elsewhere; never put API keys in Vite variables.
