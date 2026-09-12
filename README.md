@@ -17,6 +17,12 @@ brief with OpenAI, review and copy it, then open Flow to generate and edit scene
 This is a manual handoff, not automatic Flow project or video synchronization.
 See [Google Flow integration](GOOGLE_FLOW_INTEGRATION.md) for setup and limitations.
 
+## NVIDIA AI Workbench
+
+**TKS works with NVIDIA AI Workbench in selected AI and media engineering workflows.** AI Workbench provides a reproducible, Git-centered environment for developing and testing TKS projects across local and remote compute.
+
+NVIDIA is the provider of a development tool used in parts of the TKS workflow. TKS is independently developed; this statement does not claim NVIDIA sponsorship, endorsement, partnership, certification, or corporate affiliation. See [TKS and NVIDIA AI Workbench](NVIDIA_AI_WORKBENCH.md) for the precise technical scope, setup path, verification checklist, and brand boundary.
+
 ## ⚡ Setup & API Keys
 
 **IMPORTANT:** GitHub Spark is no longer available. This app now uses direct API integration.
