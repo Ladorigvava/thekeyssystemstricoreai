@@ -126,4 +126,3 @@ export function clearAnalytics(): void {
     // Storage can be disabled by the browser.
   }
 }
-

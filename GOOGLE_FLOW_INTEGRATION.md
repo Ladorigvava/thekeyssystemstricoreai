@@ -54,3 +54,7 @@ checking and building in CI.
 The default build uses `/` for a Node-hosted app. The Pages deployment workflow
 sets `VITE_BASE_PATH=/thekeyssystemstricoreai/`. Configure `VITE_API_URL` at build
 time when the API is hosted elsewhere; never put API keys in Vite variables.
+For Pages, set repository Actions variable `TKS_API_URL` to the deployed backend
+URL. The Pages workflow maps it to `VITE_API_URL`. Without it, the Flow brief
+button is disabled on github.io and shows a configuration message; opening Flow
+still works. The backend must allow requests from the deployed TKS origin.

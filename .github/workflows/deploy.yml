@@ -34,6 +34,7 @@ jobs:
       - name: Build
         env:
           VITE_BASE_PATH: /thekeyssystemstricoreai/
+          VITE_API_URL: ${{ vars.TKS_API_URL }}
         run: npm run build
 
       - name: Setup Pages

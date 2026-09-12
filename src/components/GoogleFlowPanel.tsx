@@ -9,6 +9,7 @@ export function GoogleFlowPanel({ input }: { input: FlowBriefInput }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const controller = useRef<AbortController | null>(null)
+  const needsBackend = window.location.hostname.endsWith('.github.io') && !import.meta.env.VITE_API_URL
   useEffect(() => () => controller.current?.abort(), [])
 
   async function generate() {
@@ -56,7 +57,7 @@ export function GoogleFlowPanel({ input }: { input: FlowBriefInput }) {
         This action sends your brief inputs to OpenAI through the TKS server.
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button onClick={generate} disabled={busy || !input.description.trim()}>
+        <Button onClick={generate} disabled={needsBackend || busy || !input.description.trim()}>
           {busy ? 'Preparing with OpenAI…' : 'Prepare Flow brief with OpenAI'}
         </Button>
         {busy && <Button variant="outline" onClick={() => controller.current?.abort()}>Cancel</Button>}
@@ -65,6 +66,10 @@ export function GoogleFlowPanel({ input }: { input: FlowBriefInput }) {
         </Button>
         {brief && <Button variant="outline" onClick={copy}>Copy Flow brief</Button>}
       </div>
+      {needsBackend && <p role="status" className="text-sm text-muted-foreground">
+        OpenAI brief generation is not configured on this site. Connect the TKS backend to prepare briefs.
+        You can still open Google Flow directly.
+      </p>}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {brief && <div className="space-y-2">
         <p className="text-xs text-muted-foreground">Prepared by OpenAI · awaiting your review and manual handoff</p>
