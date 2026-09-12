@@ -12,6 +12,11 @@ The Keys Systems Tri-Core AI allows you to examine your ideas through different 
 - **Audio Studio** - Generate professional audio scripts and prompts for AI tools
 - **Video Studio** - Create production-ready video scripts and storyboards
 
+Video Studio also includes an **OpenAI-anchored Google Flow handoff**: prepare a
+brief with OpenAI, review and copy it, then open Flow to generate and edit scenes.
+This is a manual handoff, not automatic Flow project or video synchronization.
+See [Google Flow integration](GOOGLE_FLOW_INTEGRATION.md) for setup and limitations.
+
 ## ⚡ Setup & API Keys
 
 **IMPORTANT:** GitHub Spark is no longer available. This app now uses direct API integration.

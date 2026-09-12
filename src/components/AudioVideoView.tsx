@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { GoogleFlowPanel } from '@/components/GoogleFlowPanel'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
@@ -378,6 +379,11 @@ export function AudioVideoView({ config, onBack }: AudioVideoViewProps) {
               </Button>
             </div>
           </ConsoleCard>
+
+          {mediaType === 'video' && (
+            <GoogleFlowPanel input={{ description: prompt, audience: formData.audience,
+              duration: formData.duration, platform: formData.platform, tone: formData.tone }} />
+          )}
 
           {generatedBrief && (
             <motion.div
