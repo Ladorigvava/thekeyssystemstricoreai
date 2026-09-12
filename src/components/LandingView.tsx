@@ -1,6 +1,7 @@
 import { CoreModeCard } from '@/components/CoreModeCard'
 import { ConsoleCard } from '@/components/ConsoleCard'
 import { SparkStatus } from '@/components/SparkStatus'
+import { NvidiaWorkbenchPanel } from '@/components/NvidiaWorkbenchPanel'
 import { CORE_CONFIGS } from '@/lib/cores'
 import { motion } from 'framer-motion'
 import { Atom, Shield, Sparkle, FlowArrow, VideoCamera, Waveform } from '@phosphor-icons/react'
@@ -36,6 +37,7 @@ export function LandingView({ onSelectMode }: LandingViewProps) {
         </motion.div>
 
         <SparkStatus />
+        <NvidiaWorkbenchPanel />
 
         <div className="space-y-6">
           <motion.div
