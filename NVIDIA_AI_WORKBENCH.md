@@ -31,7 +31,7 @@ NVIDIA recommends importing an existing Git repository and allowing AI Workbench
 4. In the project terminal, install dependencies with `npm install`.
 5. Add a custom web application in AI Workbench with:
    - start command: `npm run dev -- --host 0.0.0.0`
-   - port: `5173`
+   - port: `5000`
 6. Start the application through AI Workbench and verify its proxied session URL.
 7. Run `npm run build` before accepting changes.
 8. Store any provider keys in the project runtime secret store. Do not expose secrets through browser-delivered `VITE_*` variables.
@@ -44,7 +44,7 @@ A TKS change may be described as tested through NVIDIA AI Workbench only after a
 
 - the repository clones successfully;
 - the Workbench environment builds;
-- the custom web application starts on port 5173;
+- the custom web application starts on port 5000;
 - the proxied interface loads;
 - `npm run build` completes;
 - no credential is committed or delivered to the browser;
